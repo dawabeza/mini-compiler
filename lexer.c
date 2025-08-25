@@ -14,7 +14,7 @@ void init_lexer_state(struct lexer_state *lexer_state)
     lexer_state->line = lexer_state->cur_line_start = 1;
     lexer_state->token_p = 0;
     get_stream(lexer_state->input_str);
-    init_name_map(lexer_state);
+    init_op_keyword(lexer_state);
 }
 
 void destroy_lexer_state(struct lexer_state *lexer_state)
@@ -48,6 +48,9 @@ void scan(struct lexer_state *lexer_state)
         }
         else if (find_operator(lexer_state, cur_char) != -1) {
             cur = scan_operator(cur, lexer_state);
+        }
+        else if (cur_char == '#') {
+            cur = skip_comment(cur, lexer_state);
         }
         else if (cur_char == '\n') {
             lexer_state->line++;
@@ -159,8 +162,14 @@ int scan_str_literal(int cur, struct lexer_state *lexer_state)
         report_error(lexer_state, "No closing double quote for string", prev, cur);
     }
     else {
-        char *lexeme = sub_str(lexer_state, prev, cur + 1);
         cur++;
+        char *lexeme = sub_str(lexer_state, prev, cur);
+         struct literal str_literal = {
+            .literal_type = TOKEN_STR_LITERAL,
+            .literal_val.str_literal = lexeme
+        };
+        add_token(lexer_state, lexeme, get_token_type(lexer_state, lexeme), prev, cur - 1, str_literal);
+        
     }
     
     return cur;
@@ -170,11 +179,25 @@ int scan_operator(int cur, struct lexer_state *lexer_state)
 {
     int prev = cur;
     cur++;
+    switch(lexer_state->input_str[prev]) {
+        case '+': case '-': case '*': case '/': case '>': case '<': case '=':
+            if (lexer_state->input_str[cur]  == '=') {
+                cur++;
+            }
+            break;
+    }
     char *lexeme = sub_str(lexer_state, prev, cur);
     struct literal no_literal = {
         .literal_type = TOKEN_NONE_TOKEN
     };
     add_token(lexer_state, lexeme, get_token_type(lexer_state, lexeme), prev, cur - 1, no_literal);
+    return cur;
+}
+
+int skip_comment(int cur, struct lexer_state *lexer_state)
+{
+    while (lexer_state->input_str[cur] != '\n' && lexer_state->input_str[cur] != '\0') 
+        cur++;
     return cur;
 }
 
@@ -191,7 +214,7 @@ void get_stream(char *input_str)
 void print_tokens(struct lexer_state *lexer_state)
 {
     for (int i = 0; i < lexer_state->token_p; i++) {
-        printf("%s | ", lexer_state->tokens[i]->lexeme);
+        printf("%s\n", lexer_state->tokens[i]->lexeme);
     }
 }
 
@@ -231,12 +254,15 @@ enum token_type get_token_type(struct lexer_state *lexer_state, char *lexeme)
     return TOKEN_NONE_TOKEN;
 }
 
-void init_name_map(struct lexer_state *lexer_state)
+void init_op_keyword(struct lexer_state *lexer_state)
 {
-     char *ops[] = {";", "=", "+", "/", "*", "-", ",", "%", "(", ")", "{", "}", "if", "else", "while", "for", "fun", "var"};
-    enum token_type types[] = {TOKEN_SEMICOLON, TOKEN_EQUAL, TOKEN_PLUS, TOKEN_SLASH, TOKEN_STAR, TOKEN_MINUS, TOKEN_COMMA, TOKEN_MODULO, 
-                               TOKEN_OPEN_PARENTHESIS, TOKEN_CLOSED_PARENTHESIS, TOKEN_OPEN_CURLY, TOKEN_CLOSED_CURLY,
-                                TOKEN_IF, TOKEN_ELSE, TOKEN_WHILE, TOKEN_FOR, TOKEN_FUN, TOKEN_VAR
+    char *ops[] = {";", "=", "+=", "-=", "*=", "/=", "+",  "/", "*", "-", ",", "%", "#", "(", ")", "{", 
+                    "}", ">", "<", ">=", "<=", "==", "if", "else", "while", "for", "fun", "var", "true", "false"};
+    enum token_type types[] = {TOKEN_SEMICOLON, TOKEN_ASSIGNMENT, TOKEN_PLUS_ASSIGN, TOKEN_MINUS_ASSIGN, TOKEN_STAR_ASSIGN,
+                               TOKEN_SLASH_ASSIGN, TOKEN_PLUS, TOKEN_SLASH, TOKEN_STAR, TOKEN_MINUS, TOKEN_COMMA, TOKEN_MODULO, 
+                               TOKEN_BANG, TOKEN_OPEN_PARENTHESIS, TOKEN_CLOSED_PARENTHESIS, TOKEN_OPEN_CURLY, TOKEN_CLOSED_CURLY,
+                               TOKEN_GREATER_THAN, TOKEN_GREATER_EQUAL, TOKEN_LESS_THAN, TOKEN_LESS_EQUAL, TOKEN_EQUAL,
+                                TOKEN_IF, TOKEN_ELSE, TOKEN_WHILE, TOKEN_FOR, TOKEN_FUN, TOKEN_VAR, TOKEN_TRUE, TOKEN_FALSE
                               };
     for (int i = 0; i < OP_KEY_COUNT; i++) {
         lexer_state->name_map[i].name = my_strdup(ops[i]);

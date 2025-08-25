@@ -2,7 +2,7 @@
 #define LEXER_H
 #define MAX_TOKEN 10000
 #define MAX_CHARS 100000
-#define OP_KEY_COUNT 18
+#define OP_KEY_COUNT 30
 #include "token.h"
 struct token;
 enum token_type;
@@ -31,12 +31,14 @@ int scan_num(int cur, struct lexer_state *lexer_state);
 int scan_name(int cur, struct lexer_state *lexer_state);
 int scan_str_literal(int cur, struct lexer_state *lexer_state);
 int scan_operator(int cur, struct lexer_state *lexer_state);
+int skip_comment(int cur, struct lexer_state *lexer_state);
+
 
 int find_operator(struct lexer_state *lexer_state, char op);
 int find_keyword(struct lexer_state *lexer_state, char *keyword);
 int next_valid_start(struct lexer_state *lexer_state, int cur);
 enum token_type get_token_type(struct lexer_state *lexer_state, char *lexeme);
-void init_name_map(struct lexer_state *lexer_state);
+void init_op_keyword(struct lexer_state *lexer_state);
 
 void get_stream(char *input_str);
 void print_tokens(struct lexer_state *lexer_state);
