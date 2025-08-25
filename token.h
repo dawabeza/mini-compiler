@@ -9,7 +9,9 @@ enum token_type {
     //keywords
     TOKEN_IF, TOKEN_ELSE, TOKEN_FOR, TOKEN_WHILE, TOKEN_FUN, TOKEN_VAR,
     //literal
-    TOKEN_NUMBER, TOKEN_STR_LITERAL
+    TOKEN_NUMBER, TOKEN_STR_LITERAL,
+    //indicate token type for non-token tokens
+    TOKEN_NONE_TOKEN
 };
 
 struct literal {
@@ -17,11 +19,11 @@ struct literal {
     union {
         long double num_literal;
         char *str_literal;
-    } lexeme;
+    } literal_val;
 };
 
 struct token {
-    char lexeme[MAX_LEXEME];
+    char *lexeme;
     enum token_type token_type;
     struct literal literal;
     int start_pos;
@@ -29,6 +31,5 @@ struct token {
     int line;
 };
 
-void init_token(struct token *token, char *lexeme, enum token_type token_type, int start_pos, int end_pos, int line);
-void destroy_token(struct token *token);
+void init_token(struct token *token, char *lexeme, enum token_type token_type, int start_pos, int end_pos, struct literal literal, int line);
 #endif

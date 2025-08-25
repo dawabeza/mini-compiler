@@ -1,4 +1,5 @@
 #ifndef ERROR_HANLING_H
 #define ERROR_HANDLING_H
-void report_error(char *error_message, int line, int cur_start, int cur_end);
+struct  lexer_state;
+void report_error(struct lexer_state *lexer_state, char *error_message, int cur_start, int cur_end);
 #endif
