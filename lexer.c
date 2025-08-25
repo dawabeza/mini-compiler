@@ -11,7 +11,7 @@
 void init_lexer_state(struct lexer_state *lexer_state)
 {
     lexer_state->had_error = 0;
-    lexer_state->line = 1;
+    lexer_state->line = lexer_state->cur_line_start = 1;
     lexer_state->token_p = 0;
     get_stream(lexer_state->input_str);
     init_name_map(lexer_state);
@@ -34,7 +34,7 @@ void scan(struct lexer_state *lexer_state)
     int cur = 0;
     while (lexer_state->input_str[cur] != '\0') {
         char cur_char = lexer_state->input_str[cur];
-        if (isspace(cur_char)) {
+        if (isspace(cur_char) && cur_char != '\n') {
             cur++;
         }
         else if (isdigit(cur_char)) {
@@ -51,6 +51,7 @@ void scan(struct lexer_state *lexer_state)
         }
         else if (cur_char == '\n') {
             lexer_state->line++;
+            lexer_state->cur_line_start = cur;
             cur++;
         }
         else {
@@ -198,7 +199,7 @@ int find_operator(struct lexer_state *lexer_state, char op)
 {
     char temp_op[2] = {op, '\0'};
     for (int i = 0; i < OP_KEY_COUNT; i++) {
-        if (strcmp(lexer_state->name_map->name, temp_op)) return i;
+        if (strcmp(lexer_state->name_map[i].name, temp_op) == 0) return i;
     }
     return -1;
 }
@@ -232,8 +233,8 @@ enum token_type get_token_type(struct lexer_state *lexer_state, char *lexeme)
 
 void init_name_map(struct lexer_state *lexer_state)
 {
-     char *ops[] = {"+", "/", "*", "-", ",", "%", "(", ")", "{", "}", "if", "else", "while", "for", "fun", "var"};
-    enum token_type types[] = {TOKEN_PLUS, TOKEN_SLASH, TOKEN_STAR, TOKEN_MINUS, TOKEN_COMMA, TOKEN_MODULO, 
+     char *ops[] = {";", "=", "+", "/", "*", "-", ",", "%", "(", ")", "{", "}", "if", "else", "while", "for", "fun", "var"};
+    enum token_type types[] = {TOKEN_SEMICOLON, TOKEN_EQUAL, TOKEN_PLUS, TOKEN_SLASH, TOKEN_STAR, TOKEN_MINUS, TOKEN_COMMA, TOKEN_MODULO, 
                                TOKEN_OPEN_PARENTHESIS, TOKEN_CLOSED_PARENTHESIS, TOKEN_OPEN_CURLY, TOKEN_CLOSED_CURLY,
                                 TOKEN_IF, TOKEN_ELSE, TOKEN_WHILE, TOKEN_FOR, TOKEN_FUN, TOKEN_VAR
                               };

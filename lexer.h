@@ -2,7 +2,7 @@
 #define LEXER_H
 #define MAX_TOKEN 10000
 #define MAX_CHARS 100000
-#define OP_KEY_COUNT 16
+#define OP_KEY_COUNT 18
 #include "token.h"
 struct token;
 enum token_type;
@@ -15,10 +15,10 @@ struct lexer_state {
     struct token *tokens[MAX_TOKEN];
     int token_p;
     char input_str[MAX_CHARS];
+    struct name_type_map name_map[OP_KEY_COUNT];
     int line;
     int had_error;
-    struct name_type_map name_map[OP_KEY_COUNT];
-
+    int cur_line_start;
 };
 
 void init_lexer_state(struct lexer_state *lexer_state);
