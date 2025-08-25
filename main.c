@@ -1,5 +1,10 @@
+#include "lexer.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 int main() {
-    printf("hello world");
+    struct lexer_state *lexer_state = malloc(sizeof(struct lexer_state));
+    init_lexer_state(lexer_state);
+    scan(lexer_state);
+    destroy_lexer_state(lexer_state);
 }
