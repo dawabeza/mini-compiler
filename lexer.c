@@ -36,6 +36,7 @@ void destroy_lexer_state(struct lexer_state *lexer_state)
         free(token);
     }
     free(lexer_state->input_str.data);
+    free(lexer_state->token_list.data);
 }
 
 void scan(struct lexer_state *lexer_state)
