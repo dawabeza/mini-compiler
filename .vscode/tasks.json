@@ -11,6 +11,7 @@
         "error_handling.c",
         "lexer.c",
         "token.c",
+        "utils.c",
         "-o",
         "main",
         "-lm"
