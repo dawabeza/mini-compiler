@@ -14,6 +14,12 @@ enum token_type FULL_LANGUAGE_TYPE[] = {TOKEN_SEMICOLON, TOKEN_ASSIGNMENT, TOKEN
                                        TOKEN_GREATER_THAN, TOKEN_GREATER_EQUAL, TOKEN_LESS_THAN, TOKEN_LESS_EQUAL, TOKEN_EQUAL,
                                        TOKEN_IF, TOKEN_ELSE, TOKEN_WHILE, TOKEN_FOR, TOKEN_FUN, TOKEN_VAR, TOKEN_TRUE, TOKEN_FALSE
                                        };
+char *FULL_LANGUAGE_TYPE_NAME[] = {"SEMICOLON", "ASSIGNMNENT", "PLUS_ASSIGN", "MINUS_ASSIGN", "STAR_ASSIGN",
+                                   "SLASH_ASSIGN", "PLUS", "SLASH", "START", "MINUS", "COMMA", "MODULO",
+                                   "BANG", "OPEN_PARENTHESIS", "CLOSED_PARENTHESIS", "OPEN_CURLY_BRACE", "CLOSED_CURLY_BRACE",
+                                   "GREATER_THAR", "GREATER_EQUAL", "LESS_THAN", "LESS_EQUAL", "EQUAL",
+                                   "IF", "ELSE", "WHILE", "FOR", "FUN", "VAR", "TRUE",  "FALSE"
+                                  };
 
 
 void init_lexer_state(struct lexer_state *lexer_state)
@@ -80,8 +86,9 @@ void add_token(struct lexer_state *lexer_state, char *lexeme, enum token_type ty
         printf("MEMORY ALLOCATION FAILED");
         exit(1);
     }
-    init_token(new_token, lexeme, type, lexer_state->cur_token_begining, lexer_state->cur_char_p, literal, lexer_state->line);
-    push_back(&lexer_state->token_list, new_token);
+    int cur_pos = lexer_state->cur_char_p - lexer_state->cur_line_start;
+    init_token(new_token, lexeme, type, lexer_state->cur_token_begining, cur_pos, literal, lexer_state->line);
+    push_back_token(&lexer_state->token_list, new_token);
 }
 
 void scan_num(struct lexer_state *lexer_state)
@@ -186,6 +193,7 @@ void skip_comment(struct lexer_state *lexer_state)
     while (peek_char(lexer_state) != '\n' && peek_char(lexer_state) != '\0') 
         advance_char(lexer_state);
 }
+
 
 void get_stream(struct my_string* my_str)
 {

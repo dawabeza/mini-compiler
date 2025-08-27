@@ -42,5 +42,5 @@ struct token_list {
 void init_token(struct token *token, char *lexeme, enum token_type token_type, int start_pos, int end_pos, struct literal *literal, int line);
 //token list operations
 void init_token_list(struct token_list *token_list);
-void push_back(struct token_list* token_list, struct token* new_token);
+void push_back_token(struct token_list* token_list, struct token* new_token);
 #endif

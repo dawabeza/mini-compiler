@@ -5,6 +5,8 @@
 #define OP_KEY_COUNT 30
 #include "token.h"
 #include "utils.h"
+
+
 struct token;
 enum token_type;
 struct literal;
@@ -17,11 +19,12 @@ struct lexer_state {
     struct token_list token_list;
     struct my_string input_str;
     struct op_key_name_map op_name_map[OP_KEY_COUNT];
-    int line;
     int had_error;
+    int line;
     int cur_line_start;
     int cur_token_begining;
     int cur_char_p;
+
 };
 
 void init_lexer_state(struct lexer_state *lexer_state);

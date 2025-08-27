@@ -12,6 +12,7 @@
         "lexer.c",
         "token.c",
         "utils.c",
+        "parser.c",
         "-o",
         "main",
         "-lm"

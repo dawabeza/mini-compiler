@@ -23,7 +23,7 @@ void init_token_list(struct token_list *token_list)
     }
 }
 
-void push_back(struct token_list *token_list, struct token *new_token)
+void push_back_token(struct token_list *token_list, struct token *new_token)
 {
     if (token_list->count == token_list->capacity) {
         token_list->capacity *= 2;
