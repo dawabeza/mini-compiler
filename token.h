@@ -13,7 +13,7 @@ enum token_type {
     //literal
     TOKEN_NUMBER, TOKEN_STR_LITERAL, TOKEN_IDENTIFIER,
     //indicate token type for non-token tokens
-    TOKEN_NONE_TOKEN
+    TOKEN_NONE_TOKEN, TOKEN_EOF
 };
 
 struct literal {

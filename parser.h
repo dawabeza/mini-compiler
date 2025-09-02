@@ -46,7 +46,7 @@ void init_parser_state(struct parser_state *parser_state, struct lexer_state *le
 
 struct token *peek_token(struct parser_state *parser_state);
 struct token *advance_token(struct parser_state *parser_state);
-struct token *advance_with_check(char *expected_lexme, struct parser_state *parser_state);
+struct token *advance_with_check(char *expected_lexme, char *error_message, struct parser_state *parser_state);
 int cur_token_match(char *lexeme, struct parser_state *parser_state);
 
 struct statement make_statement(struct parser_state * parser_state, enum statement_type type);

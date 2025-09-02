@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "lexer.h"
 #include "error_handling.h"
 #include <stdio.h>
@@ -79,6 +81,8 @@ void scan(struct lexer_state *lexer_state)
         }
     }
 
+    //add EOF token for better error_handling
+    add_token(lexer_state, strdup("EOF"), TOKEN_EOF, NULL);
     
 }
 

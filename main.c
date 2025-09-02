@@ -38,7 +38,6 @@ int main() {
     struct lexer_state lexer_state;
     init_lexer_state(&lexer_state);
     scan(&lexer_state);
-    print_tokens(&lexer_state);
     if (lexer_state.had_error) {
         printf("EXIT WITH LEXER ERROR"); exit(1);
     }
@@ -53,7 +52,7 @@ int main() {
     }
     stmt_list.count = 0;
     stmt_list.capacity = 8;
-    struct statement syntax_tree = parse_expr(&parser_state);
+    struct statement syntax_tree = parse_while(&parser_state);
     add_statement(&stmt_list, &syntax_tree);
     if (syntax_tree.type == NONE) {
         printf("EXIT WITH PARSER ERROR OF ABOVE"); exit(1);

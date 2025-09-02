@@ -54,9 +54,10 @@ struct token *advance_token(struct parser_state *parser_state)
     return parser_state->token_list.data[parser_state->cur_token_p++];
 }
 
-struct token *advance_with_check(char *expected_lexme, struct parser_state *parser_state)
+struct token *advance_with_check(char *expected_lexme, char *error_message, struct parser_state *parser_state)
 {
-    if (!peek_token(parser_state) || strcmp(expected_lexme, peek_token(parser_state)->lexeme) != 0) {
+    if (peek_token(parser_state)->token_type == TOKEN_EOF || strcmp(expected_lexme, peek_token(parser_state)->lexeme) != 0) {
+        report_parse_error(parser_state, error_message);
         return NULL;
     }
     return advance_token(parser_state);
@@ -118,18 +119,48 @@ void add_statement(struct statement_list *list, struct statement *new_stmt)
     list->data[list->count++] = *new_stmt;
 }
 
+struct statement parse_statement(struct parser_state *parser_state)
+{
+    return  parse_expr(parser_state);
+}
+
+struct statement parse_while(struct parser_state *parser_state)
+{
+    struct statement while_stmt = make_statement(parser_state, WHILE_STMT);
+    advance_token(parser_state);
+    if (!advance_with_check("(", "INVALID PARENTHESIS", parser_state)) {
+        return make_statement(parser_state, NONE);
+    }
+    struct statement child_expr = parse_comma_separated(parser_state);
+    if (child_expr.type == NONE) return make_statement(parser_state, NONE);
+    if (!advance_with_check(")", "INVALID PARENTHESIS", parser_state)) {
+        return make_statement(parser_state, NONE);
+    }
+    struct statement child_stmt = parse_statement(parser_state);
+    if (child_stmt.type == NONE) return make_statement(parser_state, NONE);
+    add_statement(&while_stmt.list, &child_expr);
+    add_statement(&while_stmt.list, &child_stmt);
+    return while_stmt;
+}
+
 struct statement parse_expr(struct parser_state *parser_state)
 {
-    return parse_comma_separated(parser_state);
+    struct statement expr_stmt = parse_comma_separated(parser_state);
+    if (!advance_with_check(";", "NO CLOSING SEMICOLONG", parser_state)) {
+        return make_statement(parser_state, NONE);
+    }
+    return expr_stmt;
 }
 
 struct statement parse_comma_separated(struct parser_state *parser_state)
 {
     struct statement left = parse_assignment(parser_state);
+    if (left.type == NONE) return make_statement(parser_state, NONE);
     while (cur_token_match(",", parser_state)) {
             struct statement root = make_statement(parser_state, EQUALITY_STMT);
             advance_token(parser_state);
             struct statement right = parse_assignment(parser_state);
+            if (right.type == NONE) return make_statement(parser_state, NONE);
             add_statement(&root.list, &left);
             add_statement(&root.list, &right);
             left = root;
@@ -141,12 +172,14 @@ struct statement parse_comma_separated(struct parser_state *parser_state)
 
 struct statement parse_assignment(struct parser_state *parser_state)
 {
-   struct statement left = parse_equality(parser_state);
+    struct statement left = parse_equality(parser_state);
+    if (left.type == NONE) return make_statement(parser_state, NONE);
     if (cur_token_match("=", parser_state) || cur_token_match("+=", parser_state) || cur_token_match("-=", parser_state) ||
         cur_token_match("*=", parser_state) || cur_token_match("/=", parser_state) || cur_token_match("%=", parser_state)) {
             struct statement root = make_statement(parser_state, ASSIGNMENT_STMT);
             advance_token(parser_state);
             struct statement right = parse_assignment(parser_state);
+            if (right.type == NONE) return make_statement(parser_state, NONE);
             add_statement(&root.list, &left);
             add_statement(&root.list, &right);
             left = root;
@@ -158,10 +191,12 @@ struct statement parse_assignment(struct parser_state *parser_state)
 struct statement parse_equality(struct parser_state * parser_state)
 {
     struct statement left = parse_comparison(parser_state);
+    if (left.type == NONE) return make_statement(parser_state, NONE);
     while (cur_token_match("==", parser_state) || cur_token_match("!=", parser_state)) {
             struct statement root = make_statement(parser_state, EQUALITY_STMT);
             advance_token(parser_state);
             struct statement right = parse_comparison(parser_state);
+            if (right.type == NONE) return make_statement(parser_state, NONE);
             add_statement(&root.list, &left);
             add_statement(&root.list, &right);
             left = root;
@@ -174,11 +209,13 @@ struct statement parse_equality(struct parser_state * parser_state)
 struct statement parse_comparison(struct parser_state *parser_state)
 {
     struct statement left = parse_term(parser_state);
+    if (left.type == NONE) return make_statement(parser_state, NONE);
     while (cur_token_match(">", parser_state) || cur_token_match(">=", parser_state) || 
            cur_token_match("<", parser_state) || cur_token_match("<=", parser_state)) {
             struct statement root = make_statement(parser_state, COMPARISON_STMT);
             advance_token(parser_state);
             struct statement right = parse_term(parser_state);
+            if (right.type == NONE) return make_statement(parser_state, NONE);
             add_statement(&root.list, &left);
             add_statement(&root.list, &right);
             left = root;
@@ -190,10 +227,12 @@ struct statement parse_comparison(struct parser_state *parser_state)
 struct statement parse_term(struct parser_state *parser_state)
 {
     struct statement left = parse_factor(parser_state);
+    if (left.type == NONE) return make_statement(parser_state, NONE);
     while (cur_token_match("+", parser_state) || cur_token_match("-", parser_state)) {
             struct statement root = make_statement(parser_state, TERM_STMT);
             advance_token(parser_state);
             struct statement right = parse_factor(parser_state);
+            if (right.type == NONE) make_statement(parser_state, NONE);
             add_statement(&root.list, &left);
             add_statement(&root.list, &right);
             left = root;
@@ -206,10 +245,12 @@ struct statement parse_term(struct parser_state *parser_state)
 struct statement parse_factor(struct parser_state* parser_state)
 {
     struct statement left = parse_unary(parser_state);
+    if (left.type == NONE) return make_statement(parser_state, NONE);
     while (cur_token_match("/", parser_state) || cur_token_match("*", parser_state) || cur_token_match("%", parser_state)) {
             struct statement root = make_statement(parser_state, FACTOR_STMT);
             advance_token(parser_state);
             struct statement right = parse_unary(parser_state);
+            if (left.type == NONE) return make_statement(parser_state, NONE);
             add_statement(&root.list, &left);
             add_statement(&root.list, &right);
             left = root;
@@ -224,6 +265,7 @@ struct statement parse_unary(struct parser_state *parser_state)
         struct statement stmt = make_statement(parser_state, UNARY_STMT);
         advance_token(parser_state);
         struct statement child = parse_basic(parser_state);
+        if (child.type == NONE) return make_statement(parser_state, NONE);
         add_statement(&stmt.list, &child);
         return stmt;
     }
@@ -233,20 +275,21 @@ struct statement parse_unary(struct parser_state *parser_state)
 
 struct statement parse_basic(struct parser_state *parser_state)
 {
-    if (peek_token(parser_state)->token_type == TOKEN_NUMBER || peek_token(parser_state)->token_type == TOKEN_STR_LITERAL ||
-        peek_token(parser_state)->token_type == TOKEN_IDENTIFIER) {
+    if (peek_token(parser_state) && peek_token(parser_state)->token_type == TOKEN_NUMBER || 
+                                    peek_token(parser_state)->token_type == TOKEN_STR_LITERAL || 
+                                    peek_token(parser_state)->token_type == TOKEN_IDENTIFIER) {
         struct statement  stmt = make_statement(parser_state, BASIC_STMT);
         advance_token(parser_state);
         return stmt;
     }
 
-    if (peek_token(parser_state)->token_type == TOKEN_OPEN_PARENTHESIS) {
+    if (peek_token(parser_state) && peek_token(parser_state)->token_type == TOKEN_OPEN_PARENTHESIS) {
         struct statement stmt = make_statement(parser_state, BASIC_STMT);
         advance_token(parser_state);
-        struct statement child = parse_expr(parser_state);
+        struct statement child = parse_comma_separated(parser_state);
+        if (child.type == NONE) return make_statement(parser_state, NONE);
         add_statement(&stmt.list, &child);
-        if (advance_with_check(")", parser_state) == NULL) {
-            report_parse_error(parser_state, "NO CLOSING PARENTHESIS");
+        if (!advance_with_check(")", "NOCLOSING PARENTHESIS", parser_state)) {
             return make_statement(parser_state, NONE);
         }
         return stmt;
