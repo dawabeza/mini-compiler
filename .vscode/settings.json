@@ -27,6 +27,7 @@
         "streambuf": "c",
         "system_error": "c",
         "tuple": "c",
-        "utility": "c"
+        "utility": "c",
+        "token.h": "c"
     }
 }

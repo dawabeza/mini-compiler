@@ -6,18 +6,18 @@
 #include <stdlib.h>
 #include <math.h>
 
-char *FULL_LANGUAGE[] = {";", "=", "+=", "-=", "*=", "/=", "+",  "/", "*", "-", ",", "%", "#", "(", ")", "{", 
-                    "}", ">", "<", ">=", "<=", "==", "if", "else", "while", "for", "fun", "var", "true", "false"};
+char *FULL_LANGUAGE[] = {";", "=", "+=", "-=", "*=", "/=", "+",  "/", "*", "-", ",", "%", "#", "!", "(", ")", "{", 
+                    "}", ">", "<", ">=", "<=", "==", "!=", "if", "else", "while", "for", "fun", "var", "true", "false"};
 enum token_type FULL_LANGUAGE_TYPE[] = {TOKEN_SEMICOLON, TOKEN_ASSIGNMENT, TOKEN_PLUS_ASSIGN, TOKEN_MINUS_ASSIGN, TOKEN_STAR_ASSIGN,
-                                       TOKEN_SLASH_ASSIGN, TOKEN_PLUS, TOKEN_SLASH, TOKEN_STAR, TOKEN_MINUS, TOKEN_COMMA, TOKEN_MODULO, 
+                                       TOKEN_SLASH_ASSIGN, TOKEN_PLUS, TOKEN_SLASH, TOKEN_STAR, TOKEN_MINUS, TOKEN_COMMA, TOKEN_MODULO, TOKEN_HASH_TAG,
                                        TOKEN_BANG, TOKEN_OPEN_PARENTHESIS, TOKEN_CLOSED_PARENTHESIS, TOKEN_OPEN_CURLY, TOKEN_CLOSED_CURLY,
-                                       TOKEN_GREATER_THAN, TOKEN_GREATER_EQUAL, TOKEN_LESS_THAN, TOKEN_LESS_EQUAL, TOKEN_EQUAL,
+                                       TOKEN_GREATER_THAN, TOKEN_LESS_THAN, TOKEN_GREATER_EQUAL, TOKEN_LESS_EQUAL, TOKEN_EQUAL, TOKEN_BANG_EQUAL,
                                        TOKEN_IF, TOKEN_ELSE, TOKEN_WHILE, TOKEN_FOR, TOKEN_FUN, TOKEN_VAR, TOKEN_TRUE, TOKEN_FALSE
                                        };
 char *FULL_LANGUAGE_TYPE_NAME[] = {"SEMICOLON", "ASSIGNMNENT", "PLUS_ASSIGN", "MINUS_ASSIGN", "STAR_ASSIGN",
                                    "SLASH_ASSIGN", "PLUS", "SLASH", "START", "MINUS", "COMMA", "MODULO",
                                    "BANG", "OPEN_PARENTHESIS", "CLOSED_PARENTHESIS", "OPEN_CURLY_BRACE", "CLOSED_CURLY_BRACE",
-                                   "GREATER_THAR", "GREATER_EQUAL", "LESS_THAN", "LESS_EQUAL", "EQUAL",
+                                   "GREATER_THAR", "GREATER_EQUAL", "LESS_THAN", "LESS_EQUAL", "EQUAL", "BANG EQUAL",
                                    "IF", "ELSE", "WHILE", "FOR", "FUN", "VAR", "TRUE",  "FALSE"
                                   };
 
@@ -47,6 +47,7 @@ void destroy_lexer_state(struct lexer_state *lexer_state)
 
 void scan(struct lexer_state *lexer_state)
 {
+
     while (!is_at_end(lexer_state)) {
         char cur_char = peek_char(lexer_state);
         if (isspace(cur_char) && cur_char != '\n') {
@@ -77,6 +78,8 @@ void scan(struct lexer_state *lexer_state)
             skip_invalid(lexer_state);
         }
     }
+
+    
 }
 
 void add_token(struct lexer_state *lexer_state, char *lexeme, enum token_type type, struct literal *literal)
@@ -151,7 +154,7 @@ void scan_name(struct lexer_state *lexer_state)
         add_token(lexer_state, lexeme, get_token_type(lexer_state, lexeme), NULL);
     }
     else {
-        add_token(lexer_state, lexeme, TOKEN_VAR, NULL);
+        add_token(lexer_state, lexeme, TOKEN_IDENTIFIER, NULL);
     }
 }
 
@@ -169,7 +172,7 @@ void scan_str_literal(struct lexer_state *lexer_state)
         advance_char(lexer_state);
         char *lexeme = get_cur_token_lexeme(lexer_state);
         struct literal *str_literal = make_literal(TOKEN_STR_LITERAL, 0, lexeme);
-        add_token(lexer_state, lexeme, get_token_type(lexer_state, lexeme), str_literal); 
+        add_token(lexer_state, lexeme, TOKEN_STR_LITERAL, str_literal); 
     }
 }
 
@@ -178,7 +181,7 @@ void scan_operator(struct lexer_state *lexer_state)
     save_token_begining(lexer_state);
     advance_char(lexer_state);
     switch(prev_char(lexer_state)) {
-        case '+': case '-': case '*': case '/': case '>': case '<': case '=':
+        case '+': case '-': case '*': case '/': case '>': case '<': case '=': case '!':
             if (peek_char(lexer_state)  == '=') {
                 advance_char(lexer_state);
             }
