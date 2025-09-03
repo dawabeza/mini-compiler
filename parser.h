@@ -20,7 +20,8 @@ enum statement_type {
     FACTOR_STMT,
     UNARY_STMT,
     BASIC_STMT ,
-    NONE,//special for error handling
+    ERROR_EXPR, //for error_handling
+    EMPTY_EXPR
 };
 
 struct statement_list {
