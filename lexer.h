@@ -24,7 +24,6 @@ struct lexer_state {
     int cur_line_start;
     int cur_token_begining;
     int cur_char_p;
-
 };
 
 void init_lexer_state(struct lexer_state *lexer_state);

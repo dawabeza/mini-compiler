@@ -54,9 +54,9 @@ struct token *advance_token(struct parser_state *parser_state)
     return parser_state->token_list.data[parser_state->cur_token_p++];
 }
 
-struct token *advance_with_check(char *expected_lexme, char *error_message, struct parser_state *parser_state)
+struct token *advance_with_check(enum token_type expected_token, char *error_message, struct parser_state *parser_state)
 {
-    if (peek_token(parser_state)->token_type == TOKEN_EOF || strcmp(expected_lexme, peek_token(parser_state)->lexeme) != 0) {
+    if (peek_token(parser_state)->token_type == TOKEN_EOF || peek_token(parser_state)->token_type != expected_token) {
         report_parse_error(parser_state, error_message);
         return NULL;
     }
@@ -71,19 +71,9 @@ int cur_token_match(char *lexeme, struct parser_state *parser_state)
     return strcmp(lexeme, peek_token(parser_state)->lexeme) == 0;
 }
 
-// struct statement parse_statement(struct parser_state *parser_state)
-// {
-//     switch (peek_token(parser_state)->token_type)
-//     {
-//     case TOKEN_VAR: return parse_decl(parser_state);
-//     case TOKEN_IF: return parse_if(parser_state);
-//     case TOKEN_FOR: return parse_for(parser_state);
-//     case TOKEN_WHILE: return parse_while(parser_state);
-//     case TOKEN_OPEN_CURLY: return parse_block(parser_state);
-//     default: return parse_expr(parser_state);
-//     }
-    
-// }
+bool parser_finished(struct parser_state *parser_state) {
+    return parser_state->cur_token_p >= parser_state->token_list.count;
+}
 
 
 void pretty_printer(struct statement *stmt, int depth)
@@ -119,21 +109,130 @@ void add_statement(struct statement_list *list, struct statement *new_stmt)
     list->data[list->count++] = *new_stmt;
 }
 
+struct statement parse_program(struct parser_state * parser_state)
+{
+    struct statement full_program = make_statement(parser_state, BLOCK_STMT);
+    while (peek_token(parser_state)->token_type != TOKEN_EOF) {
+        struct statement stmt = parse_statement(parser_state);
+        if (stmt.type == ERROR_EXPR) {
+            synchronize(parser_state);
+        }
+        add_statement(&full_program.list, &stmt);
+    }
+    return full_program;
+}
+
 struct statement parse_statement(struct parser_state *parser_state)
 {
-    return  parse_expr(parser_state);
+    switch (peek_token(parser_state)->token_type) {
+        case TOKEN_VAR:
+            return parse_decl(parser_state);
+        case TOKEN_OPEN_CURLY:
+            return parse_block(parser_state);
+        case TOKEN_IF:
+            return parse_if(parser_state);
+        case TOKEN_FOR:
+            return parse_for(parser_state);
+        case TOKEN_WHILE:
+            return parse_while(parser_state);
+        case TOKEN_EOF:
+            return make_statement(parser_state, ERROR_EXPR);
+        default:
+            return parse_expr(parser_state);
+    }
+}
+
+struct statement parse_block(struct parser_state *parser_state)
+{
+    struct statement block = make_statement(parser_state, BLOCK_STMT);
+    bool valid_block = true;
+    advance_token(parser_state);
+    while (peek_token(parser_state)->token_type != TOKEN_EOF && peek_token(parser_state)->token_type != TOKEN_CLOSED_CURLY) {
+        struct statement stmt = parse_statement(parser_state);
+        if (stmt.type == ERROR_EXPR) {
+            synchronize_block(parser_state);
+        }
+        else {
+             add_statement(&block.list, &stmt);
+        };
+    }
+
+
+    if (!advance_with_check(TOKEN_CLOSED_CURLY, "MISSING CURLY BRACE", parser_state)) {
+        return make_statement(parser_state, ERROR_EXPR);
+    }
+    return block;
+}
+
+struct statement parse_decl(struct parser_state *parser_state)
+{
+    struct statement decl_stmt = make_statement(parser_state, DECL_STMT);
+    advance_token(parser_state);
+    if (peek_token(parser_state)->token_type ==  TOKEN_IDENTIFIER) {
+        struct statement identifier = parse_basic(parser_state);
+        add_statement(&decl_stmt.list, &identifier);
+    }
+    else {
+        report_parse_error(parser_state, "INVALID IDENTIFIER IN THE DECLARATION");
+        return make_statement(parser_state, ERROR_EXPR);
+    }
+
+
+    if (peek_token(parser_state)->token_type == TOKEN_ASSIGNMENT) {
+        advance_token(parser_state);
+        struct statement initializer = parse_expr(parser_state);
+        if (initializer.type == ERROR_EXPR) {
+            return make_statement(parser_state, ERROR_EXPR);
+        }
+        add_statement(&decl_stmt.list, &initializer);
+    }
+    else {
+        if (!advance_with_check(TOKEN_SEMICOLON, "MISSING SEMICOLON", parser_state)) {
+            return make_statement(parser_state, ERROR_EXPR);
+        }
+    }
+
+    return decl_stmt;
 }
 
 struct statement parse_if(struct parser_state *parser_state)
 {
-    return statement();
+    struct statement if_stmt = make_statement(parser_state, IF_STMT);
+    advance_token(parser_state);
+     if (!advance_with_check(TOKEN_OPEN_PARENTHESIS, "INVALID PARENTHESIS", parser_state)) {
+        return make_statement(parser_state, ERROR_EXPR);
+    }
+    struct statement condition_expr = parse_comma_separated(parser_state);
+    if (condition_expr.type == ERROR_EXPR) {
+        return make_statement(parser_state, ERROR_EXPR);
+    }
+    if (!advance_with_check(TOKEN_CLOSED_PARENTHESIS, "INVALID PARENTHESIS", parser_state)) {
+        return make_statement(parser_state, ERROR_EXPR);
+    }
+    struct statement stmt = parse_statement(parser_state);
+
+    if (stmt.type == ERROR_EXPR || stmt.type == EMPTY_EXPR) {
+        return make_statement(parser_state, ERROR_EXPR);
+    }
+
+    add_statement(&if_stmt.list, &condition_expr);
+    add_statement(&if_stmt.list, &stmt);
+   if (peek_token(parser_state) && peek_token(parser_state)->token_type == TOKEN_ELSE) {
+    advance_token(parser_state);
+    struct statement else_stmt = parse_statement(parser_state);
+    if (else_stmt.type == ERROR_EXPR) {
+        return make_statement(parser_state, ERROR_EXPR);
+    }
+    add_statement(&if_stmt.list, &else_stmt);
+   }
+    return if_stmt;
 }
 
 struct statement parse_for(struct parser_state *parser_state)
 {
     struct statement for_stmt = make_statement(parser_state, FOR_STMT);
     advance_token(parser_state);
-    if (!advance_with_check("(", "INVALID PARENTHESIS", parser_state)) {
+    if (!advance_with_check(TOKEN_OPEN_PARENTHESIS, "INVALID PARENTHESIS", parser_state)) {
         return make_statement(parser_state, ERROR_EXPR);
     }
     //for each child expression, if one is error, the for statement itself is error
@@ -144,7 +243,7 @@ struct statement parse_for(struct parser_state *parser_state)
     //here the third expression part of the for loop(increment) is not actually an expression since not terminated by semicolon
     struct statement increment_expr = parse_comma_separated(parser_state);
     if (increment_expr.type == ERROR_EXPR) return make_statement(parser_state, ERROR_EXPR);
-     if (!advance_with_check(")", "INVALID PARENTHESIS", parser_state)) {
+     if (!advance_with_check(TOKEN_CLOSED_PARENTHESIS, "INVALID PARENTHESIS", parser_state)) {
         return make_statement(parser_state, ERROR_EXPR);
     }
     struct statement stmt = parse_statement(parser_state);
@@ -162,7 +261,7 @@ struct statement parse_while(struct parser_state *parser_state)
 {
     struct statement while_stmt = make_statement(parser_state, WHILE_STMT);
     advance_token(parser_state);
-    if (!advance_with_check("(", "INVALID PARENTHESIS", parser_state)) {
+    if (!advance_with_check(TOKEN_OPEN_PARENTHESIS, "INVALID PARENTHESIS", parser_state)) {
         return make_statement(parser_state, ERROR_EXPR);
     }
     struct statement child_expr = parse_comma_separated(parser_state);
@@ -170,7 +269,7 @@ struct statement parse_while(struct parser_state *parser_state)
         report_parse_error(parser_state, "INVALID WHILE EXPRESSION");
         return make_statement(parser_state, ERROR_EXPR);
     }
-    if (!advance_with_check(")", "INVALID PARENTHESIS", parser_state)) {
+    if (!advance_with_check(TOKEN_CLOSED_PARENTHESIS, "INVALID PARENTHESIS", parser_state)) {
         return make_statement(parser_state, ERROR_EXPR);
     }
     struct statement child_stmt = parse_statement(parser_state);
@@ -186,7 +285,7 @@ struct statement parse_while(struct parser_state *parser_state)
 struct statement parse_expr(struct parser_state *parser_state)
 {
     struct statement expr_stmt = parse_comma_separated(parser_state);
-    if (!advance_with_check(";", "NO CLOSING SEMICOLONG", parser_state)) {
+    if (!advance_with_check(TOKEN_SEMICOLON, "NO CLOSING SEMICOLONG", parser_state)) {
         return make_statement(parser_state, ERROR_EXPR);
     }
     return expr_stmt;
@@ -201,6 +300,10 @@ struct statement parse_comma_separated(struct parser_state *parser_state)
             advance_token(parser_state);
             struct statement right = parse_assignment(parser_state);
             if (right.type == ERROR_EXPR) return make_statement(parser_state, ERROR_EXPR);
+            if (right.type == EMPTY_EXPR) {
+                report_parse_error(parser_state, "INVALID BINARY OPERAND");
+                return make_statement(parser_state, ERROR_EXPR);
+            }
             add_statement(&root.list, &left);
             add_statement(&root.list, &right);
             left = root;
@@ -220,6 +323,10 @@ struct statement parse_assignment(struct parser_state *parser_state)
             advance_token(parser_state);
             struct statement right = parse_assignment(parser_state);
             if (right.type == ERROR_EXPR) return make_statement(parser_state, ERROR_EXPR);
+            if (right.type == EMPTY_EXPR) {
+                report_parse_error(parser_state, "INVALID BINARY OPERAND");
+                return make_statement(parser_state, ERROR_EXPR);
+            }
             add_statement(&root.list, &left);
             add_statement(&root.list, &right);
             left = root;
@@ -237,6 +344,10 @@ struct statement parse_equality(struct parser_state * parser_state)
             advance_token(parser_state);
             struct statement right = parse_comparison(parser_state);
             if (right.type == ERROR_EXPR) return make_statement(parser_state, ERROR_EXPR);
+            if (right.type == EMPTY_EXPR) {
+                report_parse_error(parser_state, "INVALID BINARY OPERAND");
+                return make_statement(parser_state, ERROR_EXPR);
+            }
             add_statement(&root.list, &left);
             add_statement(&root.list, &right);
             left = root;
@@ -256,6 +367,10 @@ struct statement parse_comparison(struct parser_state *parser_state)
             advance_token(parser_state);
             struct statement right = parse_term(parser_state);
             if (right.type == ERROR_EXPR) return make_statement(parser_state, ERROR_EXPR);
+            if (right.type == EMPTY_EXPR) {
+                report_parse_error(parser_state, "INVALID BINARY OPERAND");
+                return make_statement(parser_state, ERROR_EXPR);
+            }
             add_statement(&root.list, &left);
             add_statement(&root.list, &right);
             left = root;
@@ -273,6 +388,10 @@ struct statement parse_term(struct parser_state *parser_state)
             advance_token(parser_state);
             struct statement right = parse_factor(parser_state);
             if (right.type == ERROR_EXPR) make_statement(parser_state, ERROR_EXPR);
+            if (right.type == EMPTY_EXPR) {
+                report_parse_error(parser_state, "INVALID BINARY OPERAND");
+                return make_statement(parser_state, ERROR_EXPR);
+            }
             add_statement(&root.list, &left);
             add_statement(&root.list, &right);
             left = root;
@@ -290,7 +409,11 @@ struct statement parse_factor(struct parser_state* parser_state)
             struct statement root = make_statement(parser_state, FACTOR_STMT);
             advance_token(parser_state);
             struct statement right = parse_unary(parser_state);
-            if (left.type == ERROR_EXPR) return make_statement(parser_state, ERROR_EXPR);
+            if (right.type == ERROR_EXPR) return make_statement(parser_state, ERROR_EXPR);
+            if (right.type == EMPTY_EXPR) {
+                report_parse_error(parser_state, "INVALID BINARY OPERAND");
+                return make_statement(parser_state, ERROR_EXPR);
+            }
             add_statement(&root.list, &left);
             add_statement(&root.list, &right);
             left = root;
@@ -306,6 +429,10 @@ struct statement parse_unary(struct parser_state *parser_state)
         advance_token(parser_state);
         struct statement child = parse_basic(parser_state);
         if (child.type == ERROR_EXPR) return make_statement(parser_state, ERROR_EXPR);
+        if (child.type == EMPTY_EXPR) {
+            report_parse_error(parser_state, "INVALID BINARY OPERAND");
+            return make_statement(parser_state, ERROR_EXPR);
+        }
         add_statement(&stmt.list, &child);
         return stmt;
     }
@@ -327,11 +454,41 @@ struct statement parse_basic(struct parser_state *parser_state)
         advance_token(parser_state);
         struct statement child = parse_comma_separated(parser_state);
         if (child.type == ERROR_EXPR) return make_statement(parser_state, ERROR_EXPR);
-        if (!advance_with_check(")", "NO CLOSING PARENTHESIS", parser_state)) {
+        if (!advance_with_check(TOKEN_CLOSED_PARENTHESIS, "NO CLOSING PARENTHESIS", parser_state)) {
             return make_statement(parser_state, ERROR_EXPR);
         }
         return child;
     }
 
     return make_statement(parser_state, EMPTY_EXPR);
+}
+
+void synchronize(struct parser_state *parser_state)
+{
+    while (peek_token(parser_state)->token_type !=  TOKEN_EOF) {
+        switch (peek_token(parser_state)->token_type) {
+            case TOKEN_IF: case TOKEN_WHILE: case TOKEN_FOR: case TOKEN_OPEN_CURLY: case TOKEN_VAR:
+                return;
+            case TOKEN_SEMICOLON: case TOKEN_CLOSED_CURLY:
+                advance_token(parser_state);
+                return;
+            default:
+                advance_token(parser_state);
+        }
+    }
+}
+
+void synchronize_block(struct parser_state *parser_state)
+{
+    while (peek_token(parser_state)->token_type != TOKEN_EOF && peek_token(parser_state)->token_type != TOKEN_CLOSED_CURLY) {
+        switch (peek_token(parser_state)->token_type) {
+            case TOKEN_IF: case TOKEN_WHILE: case TOKEN_FOR: case TOKEN_OPEN_CURLY: case TOKEN_VAR:
+                return;
+            case TOKEN_SEMICOLON:
+                advance_token(parser_state);
+                return;
+            default:
+                advance_token(parser_state);
+        }
+    }
 }

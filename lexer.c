@@ -27,7 +27,8 @@ char *FULL_LANGUAGE_TYPE_NAME[] = {"SEMICOLON", "ASSIGNMNENT", "PLUS_ASSIGN", "M
 void init_lexer_state(struct lexer_state *lexer_state)
 {
     lexer_state->had_error = 0;
-    lexer_state->line = lexer_state->cur_line_start = 1;
+    lexer_state->line = 1;
+    lexer_state->cur_line_start = 0;
     lexer_state->cur_char_p = lexer_state->cur_token_begining = 0;
     init_token_list(&lexer_state->token_list);
     init_mystring(&lexer_state->input_str);
@@ -72,8 +73,8 @@ void scan(struct lexer_state *lexer_state)
         }
         else if (cur_char == '\n') {
             lexer_state->line++;
-            lexer_state->cur_line_start = lexer_state->cur_char_p;
             advance_char(lexer_state);
+            lexer_state->cur_line_start = lexer_state->cur_char_p;
         }
         else {
             report_lexer_error(lexer_state, "Invalid charachter");
@@ -81,7 +82,8 @@ void scan(struct lexer_state *lexer_state)
         }
     }
 
-    //add EOF token for better error_handling
+    //add EOF token for better error_handling in the latter parser
+    save_token_begining(lexer_state);
     add_token(lexer_state, strdup("EOF"), TOKEN_EOF, NULL);
     
 }
@@ -94,7 +96,7 @@ void add_token(struct lexer_state *lexer_state, char *lexeme, enum token_type ty
         exit(1);
     }
     int cur_pos = lexer_state->cur_char_p - lexer_state->cur_line_start;
-    init_token(new_token, lexeme, type, lexer_state->cur_token_begining, cur_pos, literal, lexer_state->line);
+    init_token(new_token, lexeme, type, lexer_state->cur_token_begining - lexer_state->cur_line_start, cur_pos, literal, lexer_state->line);
     push_back_token(&lexer_state->token_list, new_token);
 }
 
@@ -214,7 +216,7 @@ void get_stream(struct my_string* my_str)
 void print_tokens(struct lexer_state *lexer_state)
 {
     for (int i = 0; i < lexer_state->token_list.count; i++) {
-        printf("%s\n", lexer_state->token_list.data[i]->lexeme);
+        printf("%s %d:%d\n", lexer_state->token_list.data[i]->lexeme, lexer_state->token_list.data[i]->start_pos, lexer_state->token_list.data[i]->end_pos);
     }
 }
 
@@ -327,7 +329,7 @@ char get_char_at(struct lexer_state *lexer_state, int pos)
 
 void save_token_begining(struct lexer_state *lexer_state)
 {
-    lexer_state->cur_token_begining = lexer_state->cur_char_p;
+    lexer_state->cur_token_begining = lexer_state->cur_line_start + lexer_state->cur_char_p - lexer_state->cur_line_start;
 }
 
 int cur_token_begining(struct lexer_state *lexer_state)

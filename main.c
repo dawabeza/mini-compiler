@@ -44,21 +44,12 @@ int main() {
     //the parsing stage
     struct parser_state parser_state;
     init_parser_state(&parser_state, &lexer_state);
-    struct statement_list stmt_list;
-    int initial_capacity = 8;
-     stmt_list.data = (struct statement *)malloc(sizeof(struct statement) * 8);
-    if (!stmt_list.data) {
-        printf("MEMORY ALLOCATION FAILED"); exit(1);
-    }
-    stmt_list.count = 0;
-    stmt_list.capacity = 8;
-    struct statement syntax_tree = parse_while(&parser_state);
-    add_statement(&stmt_list, &syntax_tree);
-    if (syntax_tree.type == NONE) {
-        printf("EXIT WITH PARSER ERROR OF ABOVE"); exit(1);
+    struct statement syntax_tree = parse_program(&parser_state);
+    if (parser_state.had_error) {
+        printf("EXIT WITH ABOVE ERRORS");
     }
     dump_ast_dot(&syntax_tree, "myast.dot");
-    destroy_statements(&stmt_list);
+    destroy_statements(&syntax_tree.list);
     destroy_lexer_state(&lexer_state);
 
 }

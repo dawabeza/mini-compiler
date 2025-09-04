@@ -3,6 +3,7 @@
 #define MAX_INPUT_EXPR 3
 
 #include "token.h"
+#include <stdbool.h>
 
 
 enum statement_type {
@@ -47,16 +48,18 @@ void init_parser_state(struct parser_state *parser_state, struct lexer_state *le
 
 struct token *peek_token(struct parser_state *parser_state);
 struct token *advance_token(struct parser_state *parser_state);
-struct token *advance_with_check(char *expected_lexme, char *error_message, struct parser_state *parser_state);
+struct token *advance_with_check(enum token_type expected_token, char *error_message, struct parser_state *parser_state);
+bool parser_finished(struct parser_state *parser_state);
 int cur_token_match(char *lexeme, struct parser_state *parser_state);
 
 struct statement make_statement(struct parser_state * parser_state, enum statement_type type);
 void destroy_statements(struct statement_list* stmts);
 void add_statement(struct statement_list *list, struct statement *new_stmt);
 
+struct statement parse_program(struct parser_state *parser_state);
 struct statement parse_statement(struct parser_state *parser_state);
-struct statement parse_decl(struct parser_state *parser_state);
 struct statement parse_block(struct parser_state *parser_state);
+struct statement parse_decl(struct parser_state *parser_state);
 struct statement parse_if(struct parser_state *parser_state);
 struct statement parse_for(struct parser_state *parser_state);
 struct statement parse_while(struct parser_state *parser_state);
@@ -70,7 +73,8 @@ struct statement parse_factor(struct parser_state *parser_state);
 struct statement parse_unary(struct parser_state *parser_state);
 struct statement parse_basic(struct parser_state *parser_state);
 
-
+void synchronize(struct parser_state *parser_state);
+void synchronize_block(struct parser_state *parser_state);
 
 
 
