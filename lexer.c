@@ -8,20 +8,88 @@
 #include <stdlib.h>
 #include <math.h>
 
-char *FULL_LANGUAGE[] = {";", "=", "+=", "-=", "*=", "/=", "+",  "/", "*", "-", ",", "%", "#", "!", "(", ")", "{", 
-                    "}", ">", "<", ">=", "<=", "==", "!=", "if", "else", "while", "for", "fun", "var", "true", "false"};
-enum token_type FULL_LANGUAGE_TYPE[] = {TOKEN_SEMICOLON, TOKEN_ASSIGNMENT, TOKEN_PLUS_ASSIGN, TOKEN_MINUS_ASSIGN, TOKEN_STAR_ASSIGN,
-                                       TOKEN_SLASH_ASSIGN, TOKEN_PLUS, TOKEN_SLASH, TOKEN_STAR, TOKEN_MINUS, TOKEN_COMMA, TOKEN_MODULO, TOKEN_HASH_TAG,
-                                       TOKEN_BANG, TOKEN_OPEN_PARENTHESIS, TOKEN_CLOSED_PARENTHESIS, TOKEN_OPEN_CURLY, TOKEN_CLOSED_CURLY,
-                                       TOKEN_GREATER_THAN, TOKEN_LESS_THAN, TOKEN_GREATER_EQUAL, TOKEN_LESS_EQUAL, TOKEN_EQUAL, TOKEN_BANG_EQUAL,
-                                       TOKEN_IF, TOKEN_ELSE, TOKEN_WHILE, TOKEN_FOR, TOKEN_FUN, TOKEN_VAR, TOKEN_TRUE, TOKEN_FALSE
-                                       };
-char *FULL_LANGUAGE_TYPE_NAME[] = {"SEMICOLON", "ASSIGNMNENT", "PLUS_ASSIGN", "MINUS_ASSIGN", "STAR_ASSIGN",
-                                   "SLASH_ASSIGN", "PLUS", "SLASH", "START", "MINUS", "COMMA", "MODULO",
-                                   "BANG", "OPEN_PARENTHESIS", "CLOSED_PARENTHESIS", "OPEN_CURLY_BRACE", "CLOSED_CURLY_BRACE",
-                                   "GREATER_THAR", "GREATER_EQUAL", "LESS_THAN", "LESS_EQUAL", "EQUAL", "BANG EQUAL",
-                                   "IF", "ELSE", "WHILE", "FOR", "FUN", "VAR", "TRUE",  "FALSE"
-                                  };
+char *FULL_LANGUAGE[] = {
+    // Separators / Delimiters
+    ".", "->", "[", "]", "(", ")", "{", "}", ";", ",", "#", "'",
+    // Assignment Operators
+    "=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=",
+    // Arithmetic Operators
+    "+", "-", "*", "/", "%",
+    // Bitwise Operators
+    "&", "|", "^", "~", "<<", ">>",
+    // Comparison Operators
+    ">", "<", ">=", "<=", "==", "!=",
+    // Logical / Unary
+    "!",
+    // Increment / Decrement
+    "++", "--",
+    // Ternary
+    "?", ":",
+    // Keywords
+    "sizeof", "if", "else", "while", "for", "fun", "var", "true", "false"
+};
+
+enum token_type FULL_LANGUAGE_TYPE[] = {
+    // Separators / Delimiters
+    TOKEN_DOT, TOKEN_ARROW, TOKEN_OPEN_BRACKET, TOKEN_CLOSED_BRACKET,
+    TOKEN_OPEN_PARENTHESIS, TOKEN_CLOSED_PARENTHESIS,
+    TOKEN_OPEN_CURLY, TOKEN_CLOSED_CURLY,
+    TOKEN_SEMICOLON, TOKEN_COMMA, TOKEN_HASH_TAG, TOKEN_SINGLE_QUOTE,
+    // Assignment Operators
+    TOKEN_ASSIGNMENT, TOKEN_PLUS_ASSIGN, TOKEN_MINUS_ASSIGN,
+    TOKEN_STAR_ASSIGN, TOKEN_SLASH_ASSIGN, TOKEN_MODULO_ASSIGN,
+    TOKEN_AND_ASSIGN, TOKEN_OR_ASSIGN, TOKEN_XOR_ASSIGN,
+    TOKEN_LEFT_SHIFT_ASSIGN, TOKEN_RIGHT_SHIFT_ASSIGN,
+    // Arithmetic Operators
+    TOKEN_PLUS, TOKEN_MINUS, TOKEN_STAR, TOKEN_SLASH, TOKEN_MODULO,
+    // Bitwise Operators
+    TOKEN_AND, TOKEN_OR, TOKEN_XOR, TOKEN_TILDE,
+    TOKEN_LEFT_SHIFT, TOKEN_RIGHT_SHIFT,
+    // Comparison Operators
+    TOKEN_GREATER_THAN, TOKEN_LESS_THAN,
+    TOKEN_GREATER_EQUAL, TOKEN_LESS_EQUAL,
+    TOKEN_EQUAL, TOKEN_BANG_EQUAL,
+    // Logical / Unary
+    TOKEN_BANG,
+    // Increment / Decrement
+    TOKEN_INCREMENT, TOKEN_DECREMENT,
+    // Ternary
+    TOKEN_QUESTION, TOKEN_COLON,
+    //Key words
+    TOKEN_SIZEOF, TOKEN_IF, TOKEN_ELSE, TOKEN_WHILE, TOKEN_FOR,
+    TOKEN_FUN, TOKEN_VAR, TOKEN_TRUE, TOKEN_FALSE
+};
+
+char *FULL_LANGUAGE_TYPE_NAME[] = {
+    // Separators / Delimiters
+    "DOT", "ARROW", "OPEN_BRACKET", "CLOSED_BRACKET",
+    "OPEN_PARENTHESIS", "CLOSED_PARENTHESIS",
+    "OPEN_CURLY", "CLOSED_CURLY",
+    "SEMICOLON", "COMMA", "HASH_TAG",
+    // Assignment Operators
+    "ASSIGNMENT", "PLUS_ASSIGN", "MINUS_ASSIGN",
+    "STAR_ASSIGN", "SLASH_ASSIGN", "MODULO_ASSIGN",
+    "AND_ASSIGN", "OR_ASSIGN", "XOR_ASSIGN",
+    "LEFT_SHIFT_ASSIGN", "RIGHT_SHIFT_ASSIGN",
+    // Arithmetic Operators
+    "PLUS", "MINUS", "STAR", "SLASH", "MODULO",
+    // Bitwise Operators
+    "AND", "OR", "XOR", "TILDE",
+    "LEFT_SHIFT", "RIGHT_SHIFT",
+    // Comparison Operators
+    "GREATER_THAN", "LESS_THAN",
+    "GREATER_EQUAL", "LESS_EQUAL",
+    "EQUAL", "BANG_EQUAL",
+    // Logical / Unary
+    "BANG",
+    // Increment / Decrement
+    "INCREMENT", "DECREMENT",
+    // Ternary
+    "QUESTION", "COLON",
+    // Keywords
+    "SIZEOF", "IF", "ELSE", "WHILE", "FOR",
+    "FUN", "VAR", "TRUE", "FALSE"
+};
 
 
 void init_lexer_state(struct lexer_state *lexer_state)

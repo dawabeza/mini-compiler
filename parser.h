@@ -7,13 +7,14 @@
 
 
 enum statement_type {
-    DECL_STMT,
     BLOCK_STMT,
     IF_STMT,
     FOR_STMT,
     WHILE_STMT,
     EXPR_STMT,
     COMMA_SEPARATED_STMT,
+    VAR_DECL_STMT,
+    FUN_DECL_STMT,
     ASSIGNMENT_STMT,
     EQUALITY_STMT,
     COMPARISON_STMT,
@@ -34,6 +35,7 @@ struct statement_list {
 struct statement {
     struct statement_list list;
     struct token node;
+    char *node_name;
     enum statement_type type;
 };
 
@@ -52,19 +54,22 @@ struct token *advance_with_check(enum token_type expected_token, char *error_mes
 bool parser_finished(struct parser_state *parser_state);
 int cur_token_match(char *lexeme, struct parser_state *parser_state);
 
-struct statement make_statement(struct parser_state * parser_state, enum statement_type type);
-void destroy_statements(struct statement_list* stmts);
-void add_statement(struct statement_list *list, struct statement *new_stmt);
+struct statement make_statement(struct parser_state * parser_state, enum statement_type type, char *node_name);
+void destroy_statement(struct statement* stmt);
+void add_child(struct statement_list *list, struct statement *new_stmt);
+
 
 struct statement parse_program(struct parser_state *parser_state);
 struct statement parse_statement(struct parser_state *parser_state);
 struct statement parse_block(struct parser_state *parser_state);
-struct statement parse_decl(struct parser_state *parser_state);
+struct statement parse_fun_decl(struct parser_state *parser_state);
+struct statement parse_param_list(struct parser_state *parser_state);
+struct statement parse_var_decl(struct parser_state *parser_state);
 struct statement parse_if(struct parser_state *parser_state);
 struct statement parse_for(struct parser_state *parser_state);
 struct statement parse_while(struct parser_state *parser_state);
+struct statement parse_expr_stmt(struct parser_state *parser_state);
 struct statement parse_expr(struct parser_state *parser_state);
-struct statement parse_comma_separated(struct parser_state *parser_state);
 struct statement parse_assignment(struct parser_state *parser_state);
 struct statement parse_equality(struct parser_state *parser_state);
 struct statement parse_comparison(struct parser_state *parser_state);

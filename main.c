@@ -9,7 +9,7 @@ void dump_statement_dot(FILE *out, struct statement *stmt, int *id, int parent_i
     if (!stmt) return;
 
     int my_id = (*id)++;
-    fprintf(out, "  node%d [label=\"%s\"];\n", my_id, stmt->node.lexeme);
+    fprintf(out, "  node%d [label=\"%s\"];\n", my_id, stmt->node_name);
 
     if (parent_id >= 0) {
         fprintf(out, "  node%d -> node%d;\n", parent_id, my_id);
@@ -49,7 +49,7 @@ int main() {
         printf("EXIT WITH ABOVE ERRORS");
     }
     dump_ast_dot(&syntax_tree, "myast.dot");
-    destroy_statements(&syntax_tree.list);
+    destroy_statement(&syntax_tree);
     destroy_lexer_state(&lexer_state);
 
 }
