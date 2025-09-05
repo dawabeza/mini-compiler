@@ -26,7 +26,7 @@ char *FULL_LANGUAGE[] = {
     // Ternary
     "?", ":",
     // Keywords
-    "sizeof", "if", "else", "while", "for", "fun", "var", "true", "false"
+    "nil", "if", "else", "while", "for", "fun", "var", "true", "false"
 };
 
 enum token_type FULL_LANGUAGE_TYPE[] = {
@@ -56,7 +56,7 @@ enum token_type FULL_LANGUAGE_TYPE[] = {
     // Ternary
     TOKEN_QUESTION, TOKEN_COLON,
     //Key words
-    TOKEN_SIZEOF, TOKEN_IF, TOKEN_ELSE, TOKEN_WHILE, TOKEN_FOR,
+    TOKEN_NIL, TOKEN_IF, TOKEN_ELSE, TOKEN_WHILE, TOKEN_FOR,
     TOKEN_FUN, TOKEN_VAR, TOKEN_TRUE, TOKEN_FALSE
 };
 
@@ -65,7 +65,7 @@ char *FULL_LANGUAGE_TYPE_NAME[] = {
     "DOT", "ARROW", "OPEN_BRACKET", "CLOSED_BRACKET",
     "OPEN_PARENTHESIS", "CLOSED_PARENTHESIS",
     "OPEN_CURLY", "CLOSED_CURLY",
-    "SEMICOLON", "COMMA", "HASH_TAG",
+    "SEMICOLON", "COMMA", "HASH_TAG", "SINGLE QUOTE"
     // Assignment Operators
     "ASSIGNMENT", "PLUS_ASSIGN", "MINUS_ASSIGN",
     "STAR_ASSIGN", "SLASH_ASSIGN", "MODULO_ASSIGN",
@@ -87,7 +87,7 @@ char *FULL_LANGUAGE_TYPE_NAME[] = {
     // Ternary
     "QUESTION", "COLON",
     // Keywords
-    "SIZEOF", "IF", "ELSE", "WHILE", "FOR",
+    "NIL", "IF", "ELSE", "WHILE", "FOR",
     "FUN", "VAR", "TRUE", "FALSE"
 };
 
@@ -307,9 +307,7 @@ int find_keyword(struct lexer_state *lexer_state, char *keyword)
 
 void skip_invalid(struct lexer_state *lexer_state)
 {
-     while ( !isspace(peek_char(lexer_state)) && 
-             peek_char(lexer_state) != '\n' && 
-             peek_char(lexer_state) != '\0' ) 
+     while ( !isspace(peek_char(lexer_state)) &&  peek_char(lexer_state) != '\n' && peek_char(lexer_state) != '\0' ) 
                 advance_char(lexer_state);
 }
 

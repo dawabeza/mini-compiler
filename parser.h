@@ -22,6 +22,9 @@ enum statement_type {
     FACTOR_STMT,
     UNARY_STMT,
     BASIC_STMT ,
+    POSTFIX,
+    PARAM_LIST,
+    ARG_LIST,
     ERROR_EXPR, //for error_handling
     EMPTY_EXPR
 };
@@ -35,7 +38,6 @@ struct statement_list {
 struct statement {
     struct statement_list list;
     struct token node;
-    char *node_name;
     enum statement_type type;
 };
 
@@ -52,9 +54,9 @@ struct token *peek_token(struct parser_state *parser_state);
 struct token *advance_token(struct parser_state *parser_state);
 struct token *advance_with_check(enum token_type expected_token, char *error_message, struct parser_state *parser_state);
 bool parser_finished(struct parser_state *parser_state);
-int cur_token_match(char *lexeme, struct parser_state *parser_state);
+bool token_match(struct parser_state *parser_state, int count,  ...);
 
-struct statement make_statement(struct parser_state * parser_state, enum statement_type type, char *node_name);
+struct statement make_statement(struct parser_state * parser_state, enum statement_type type);
 void destroy_statement(struct statement* stmt);
 void add_child(struct statement_list *list, struct statement *new_stmt);
 
@@ -76,6 +78,9 @@ struct statement parse_comparison(struct parser_state *parser_state);
 struct statement parse_term(struct parser_state *parser_state);
 struct statement parse_factor(struct parser_state *parser_state);
 struct statement parse_unary(struct parser_state *parser_state);
+struct statement parse_postfix(struct parser_state *parser_state);
+struct statement parse_postfix_tail(struct parser_state *parser_state);
+struct statement parse_arg_list(struct parser_state *parser_state);
 struct statement parse_basic(struct parser_state *parser_state);
 
 void synchronize(struct parser_state *parser_state);
@@ -85,4 +90,5 @@ void synchronize_block(struct parser_state *parser_state);
 
 //utils
 void pretty_printer(struct statement *stmt, int depth);
+void print_node(struct statement *stmt);
 #endif

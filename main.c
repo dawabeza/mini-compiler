@@ -9,7 +9,7 @@ void dump_statement_dot(FILE *out, struct statement *stmt, int *id, int parent_i
     if (!stmt) return;
 
     int my_id = (*id)++;
-    fprintf(out, "  node%d [label=\"%s\"];\n", my_id, stmt->node_name);
+    fprintf(out, "  node%d [label=\"%s\"];\n", my_id, stmt->node.lexeme);
 
     if (parent_id >= 0) {
         fprintf(out, "  node%d -> node%d;\n", parent_id, my_id);
