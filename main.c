@@ -9,8 +9,9 @@ void dump_statement_dot(FILE *out, struct statement *stmt, int *id, int parent_i
     if (!stmt) return;
 
     int my_id = (*id)++;
-    fprintf(out, "  node%d [label=\"%s\"];\n", my_id, stmt->node.lexeme);
-
+    char *node = node_name(stmt);
+    fprintf(out, "  node%d [label=\"%s\"];\n", my_id, node);
+    free(node);
     if (parent_id >= 0) {
         fprintf(out, "  node%d -> node%d;\n", parent_id, my_id);
     }
@@ -38,6 +39,7 @@ int main() {
     struct lexer_state lexer_state;
     init_lexer_state(&lexer_state);
     scan(&lexer_state);
+    print_tokens(&lexer_state);
     if (lexer_state.had_error) {
         printf("EXIT WITH LEXER ERROR"); exit(1);
     }

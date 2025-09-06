@@ -2,7 +2,7 @@
 #define LEXER_H
 #define MAX_TOKEN 10000
 #define MAX_CHARS 100000
-#define OP_KEY_COUNT 54
+#define OP_KEY_COUNT 60
 #include "token.h"
 #include "utils.h"
 

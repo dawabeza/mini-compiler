@@ -7,17 +7,29 @@
 
 
 enum statement_type {
+    FULL_PROGRAM,
     BLOCK_STMT,
     IF_STMT,
     FOR_STMT,
     WHILE_STMT,
     EXPR_STMT,
+    BREAK_STMT,
+    CONTINUE_STMT,
+    RETURN_STMT,
+    PRINT_STMT,
     COMMA_SEPARATED_STMT,
     VAR_DECL_STMT,
     FUN_DECL_STMT,
     ASSIGNMENT_STMT,
+    CONDITIONAL_STMT,
+    LOGICAL_OR_STMT,
+    LOGICAL_AND_STMT,
+    BITWISE_OR_STMT,
+    BITWISE_XOR_STMT,
+    BITWISE_AND_STMT,
     EQUALITY_STMT,
     COMPARISON_STMT,
+    SHIFT_STMT,
     TERM_STMT,
     FACTOR_STMT,
     UNARY_STMT,
@@ -73,8 +85,15 @@ struct statement parse_while(struct parser_state *parser_state);
 struct statement parse_expr_stmt(struct parser_state *parser_state);
 struct statement parse_expr(struct parser_state *parser_state);
 struct statement parse_assignment(struct parser_state *parser_state);
+struct statement parse_conditional(struct parser_state *parser_state);
+struct statement parse_logical_or(struct parser_state *parser_state);
+struct statement parse_logical_and(struct parser_state *parser_state);
+struct statement parse_bitwise_or(struct parser_state *parser_state);
+struct statement parse_bitwise_xor(struct parser_state *parser_state);
+struct statement parse_bitwise_and(struct parser_state *parser_state);
 struct statement parse_equality(struct parser_state *parser_state);
 struct statement parse_comparison(struct parser_state *parser_state);
+struct statement parse_shift(struct parser_state *parser_state);
 struct statement parse_term(struct parser_state *parser_state);
 struct statement parse_factor(struct parser_state *parser_state);
 struct statement parse_unary(struct parser_state *parser_state);
@@ -82,6 +101,10 @@ struct statement parse_postfix(struct parser_state *parser_state);
 struct statement parse_postfix_tail(struct parser_state *parser_state);
 struct statement parse_arg_list(struct parser_state *parser_state);
 struct statement parse_basic(struct parser_state *parser_state);
+struct statement parse_break(struct parser_state *parser_state);
+struct statement parse_continue(struct parser_state *parser_state);
+struct statement parse_return(struct parser_state *parser_state);
+struct statement parse_print(struct parser_state *parser_state);
 
 void synchronize(struct parser_state *parser_state);
 void synchronize_block(struct parser_state *parser_state);
@@ -90,5 +113,5 @@ void synchronize_block(struct parser_state *parser_state);
 
 //utils
 void pretty_printer(struct statement *stmt, int depth);
-void print_node(struct statement *stmt);
+char *node_name(struct statement *stmt);
 #endif

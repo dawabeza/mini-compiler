@@ -96,32 +96,21 @@ void pretty_printer(struct statement *stmt, int depth)
     }
 }
 
-void print_node(struct statement *stmt) {
+char  *node_name(struct statement *stmt) {
     switch (stmt->type) {
-        // Directly printable types
-        case BASIC_STMT:
-        case TERM_STMT:
-        case FACTOR_STMT:
-        case UNARY_STMT:
-        case ASSIGNMENT_STMT:
-        case EQUALITY_STMT:
-        case COMPARISON_STMT:
-        case FUN_DECL_STMT:
-        case VAR_DECL_STMT:
-        case COMMA_SEPARATED_STMT:
-        case PARAM_LIST:
-        case ARG_LIST:
-            printf("%s\n", stmt->node.lexeme);
-            break;
-        // Structural/abstract types
-        case BLOCK_STMT: printf("BLOCK\n"); break;
-        case IF_STMT: printf("IF\n"); break;
-        case FOR_STMT: printf("FOR\n"); break;
-        case WHILE_STMT: printf("WHILE\n"); break;
-        case ERROR_EXPR: printf("ERROR\n"); break;
-        case EMPTY_EXPR: printf("EMPTY\n"); break;
+        case PARAM_LIST: return strdup("PARAM LIST");
+        case ARG_LIST: return strdup("ARG LIST");
+        case BLOCK_STMT:  return strdup("BLOCK STMT");
+        case IF_STMT: return strdup("IF");
+        case FOR_STMT: return strdup("FOR");
+        case WHILE_STMT: return strdup("WHILE");
+        case ERROR_EXPR: return strdup("ERROR EXPR");
+        case EMPTY_EXPR: return strdup("EMPTY EXPR");
+        case POSTFIX: return strdup("POSTFIX");
+        case CONDITIONAL_STMT: return strdup("CONDITIONAL STMT");
+        case FULL_PROGRAM: return strdup("FULL PROGRAM");
         default:
-            printf("UNKNOWN\n");
+            return strdup(stmt->node.lexeme);
             break;
     }
 }
@@ -149,7 +138,7 @@ void add_child(struct statement_list *list, struct statement *new_stmt)
 
 struct statement parse_program(struct parser_state * parser_state)
 {
-    struct statement full_program = make_statement(parser_state, BLOCK_STMT);
+    struct statement full_program = make_statement(parser_state, FULL_PROGRAM);
     while (!token_match(parser_state, 1, TOKEN_EOF)) {
         struct statement stmt = parse_statement(parser_state);
         if (stmt.type == ERROR_EXPR) {
@@ -175,6 +164,14 @@ struct statement parse_statement(struct parser_state *parser_state)
             return parse_for(parser_state);
         case TOKEN_WHILE:
             return parse_while(parser_state);
+        case TOKEN_RETURN:
+            return parse_return(parser_state);
+        case TOKEN_PRINT:
+            return parse_print(parser_state);
+        case TOKEN_CONTINUE:
+            return parse_continue(parser_state);
+        case TOKEN_BREAK:
+            return parse_break(parser_state);
         case TOKEN_EOF:
             return make_statement(parser_state, ERROR_EXPR);
         default:
@@ -483,10 +480,11 @@ struct statement parse_expr(struct parser_state *parser_state)
             }
             if (right.type == EMPTY_EXPR) {
                 char error_buffer[40];
-                sprintf(error_buffer, "the right operand of %s is missing", root.node.lexeme);
+                sprintf(error_buffer, "Expect expression after %s", root.node.lexeme);
                 report_parse_error(parser_state, error_buffer);
                 root.type = ERROR_EXPR;
                 return root;
+
             }
             left = root;
     }
@@ -497,10 +495,12 @@ struct statement parse_expr(struct parser_state *parser_state)
 
 struct statement parse_assignment(struct parser_state *parser_state)
 {
-    struct statement left = parse_equality(parser_state);
+    struct statement left = parse_conditional(parser_state);
     if (left.type == ERROR_EXPR) return left;
-    if (token_match(parser_state, 5, TOKEN_ASSIGNMENT, TOKEN_PLUS_ASSIGN, TOKEN_MINUS_ASSIGN,
-                                     TOKEN_STAR_ASSIGN, TOKEN_SLASH_ASSIGN, TOKEN_MODULO_ASSIGN)) {
+    if (token_match(parser_state, 11, TOKEN_ASSIGNMENT, TOKEN_PLUS_ASSIGN, TOKEN_MINUS_ASSIGN,
+                                     TOKEN_STAR_ASSIGN, TOKEN_SLASH_ASSIGN, TOKEN_MODULO_ASSIGN,
+                                      TOKEN_LEFT_SHIFT_ASSIGN, TOKEN_RIGHT_SHIFT_ASSIGN,
+                                       TOKEN_AND_ASSIGN, TOKEN_OR_ASSIGN, TOKEN_XOR_ASSIGN)) {
             struct statement root = make_statement(parser_state, ASSIGNMENT_STMT);
             advance_token(parser_state);
             struct statement right = parse_assignment(parser_state);
@@ -512,7 +512,7 @@ struct statement parse_assignment(struct parser_state *parser_state)
             }
             if (right.type == EMPTY_EXPR) {
                 char error_buffer[40];
-                sprintf(error_buffer, "the right operand of %s is missing", root.node.lexeme);
+                sprintf(error_buffer, "Expect expression after %s", root.node.lexeme);
                 report_parse_error(parser_state, error_buffer);
                 root.type = ERROR_EXPR;
                 return root;
@@ -539,7 +539,7 @@ struct statement parse_equality(struct parser_state * parser_state)
             }
             if (right.type == EMPTY_EXPR) {
                 char error_buffer[40];
-                sprintf(error_buffer, "the right operand of %s is missing", root.node.lexeme);
+                sprintf(error_buffer, "Expect expression after %s", root.node.lexeme);
                 report_parse_error(parser_state, error_buffer);
                 root.type = ERROR_EXPR;
                 return root;
@@ -553,12 +553,12 @@ struct statement parse_equality(struct parser_state * parser_state)
 
 struct statement parse_comparison(struct parser_state *parser_state)
 {
-    struct statement left = parse_term(parser_state);
+    struct statement left = parse_shift(parser_state);
     if (left.type == ERROR_EXPR) return left;
     while (token_match(parser_state, 4, TOKEN_GREATER_THAN, TOKEN_GREATER_EQUAL, TOKEN_LESS_THAN, TOKEN_LESS_EQUAL)) {
             struct statement root = make_statement(parser_state, COMPARISON_STMT);
             advance_token(parser_state);
-            struct statement right = parse_term(parser_state);
+            struct statement right = parse_shift(parser_state);
             add_child(&root.list, &left);
             add_child(&root.list, &right);
            if (right.type == ERROR_EXPR) {
@@ -567,7 +567,7 @@ struct statement parse_comparison(struct parser_state *parser_state)
             }
             if (right.type == EMPTY_EXPR) {
                 char error_buffer[40];
-                sprintf(error_buffer, "the right operand of %s is missing", root.node.lexeme);
+                sprintf(error_buffer, "Expect expression after %s", root.node.lexeme);
                 report_parse_error(parser_state, error_buffer);
                 root.type = ERROR_EXPR;
                 return root;
@@ -575,6 +575,29 @@ struct statement parse_comparison(struct parser_state *parser_state)
             left = root;
     }
 
+    return left;
+}
+struct statement parse_shift(struct parser_state *parser_state) {
+    struct statement left = parse_term(parser_state);
+    while (token_match(parser_state, 2, TOKEN_LEFT_SHIFT, TOKEN_RIGHT_SHIFT)) {
+        struct statement root = make_statement(parser_state, SHIFT_STMT);
+        advance_token(parser_state);
+        struct statement right = parse_term(parser_state);
+        add_child(&root.list, &left);
+        add_child(&root.list, &right);
+        if (right.type == ERROR_EXPR) {
+            root.type = ERROR_EXPR;
+             return root;
+        }
+        if (right.type == EMPTY_EXPR) {
+            char error_buffer[40];
+            sprintf(error_buffer, "Expect expression after %s", root.node.lexeme);
+            report_parse_error(parser_state, error_buffer);
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        left = root;
+    }
     return left;
 }
 
@@ -594,7 +617,7 @@ struct statement parse_term(struct parser_state *parser_state)
             }
             if (right.type == EMPTY_EXPR) {
                 char error_buffer[40];
-                sprintf(error_buffer, "the right operand of %s is missing", root.node.lexeme);
+                sprintf(error_buffer, "Expect expression after %s", root.node.lexeme);
                 report_parse_error(parser_state, error_buffer);
                 root.type = ERROR_EXPR;
                 return root;
@@ -622,7 +645,7 @@ struct statement parse_factor(struct parser_state* parser_state)
             }
             if (right.type == EMPTY_EXPR) {
                 char error_buffer[40];
-                sprintf(error_buffer, "the right operand of %s is missing", root.node.lexeme);
+                sprintf(error_buffer, "Expect expression after %s", root.node.lexeme);
                 report_parse_error(parser_state, error_buffer);
                 root.type = ERROR_EXPR;
                 return root;
@@ -635,37 +658,39 @@ struct statement parse_factor(struct parser_state* parser_state)
 
 struct statement parse_unary(struct parser_state *parser_state)
 {
-    if (token_match(parser_state, 2, TOKEN_PLUS, TOKEN_MINUS)) {
+    // Handle all unary operators
+    if (token_match(parser_state, 6, TOKEN_BANG, TOKEN_TILDE, TOKEN_INCREMENT, TOKEN_DECREMENT, TOKEN_PLUS, TOKEN_MINUS)) {
         struct statement stmt = make_statement(parser_state, UNARY_STMT);
         advance_token(parser_state);
-        struct statement child = parse_basic(parser_state);
+        struct statement child = parse_unary(parser_state); // recurse to UNARY
         add_child(&stmt.list, &child);
         if (child.type == ERROR_EXPR) {
             stmt.type = ERROR_EXPR;
             return stmt;
-        };
+        }
+
         if (child.type == EMPTY_EXPR) {
             char error_buffer[40];
-            sprintf(error_buffer, "the right operand of %s is missing", stmt.node.lexeme);
+            sprintf(error_buffer, "the operand of %s is missing", stmt.node.lexeme);
             report_parse_error(parser_state, error_buffer);
             stmt.type = ERROR_EXPR;
             return stmt;
         }
         return stmt;
     }
-
+    // Otherwise, parse POSTFIX
     return parse_postfix(parser_state);
 }
 
 struct statement parse_postfix(struct parser_state * parser_state)
 {
-    struct statement root = parse_basic(parser_state);
-    while (token_match(parser_state, TOKEN_OPEN_PARENTHESIS, TOKEN_OPEN_BRACKET, TOKEN_DOT)) {
-       struct statement new_root = make_statement(parser_state, POSTFIX);
-       struct statement operand = parse_postfix_tail(parser_state);
-       add_child(&new_root.list, &root);
-       add_child(&new_root.list, &operand);
-        if (operand.type == ERROR_EXPR) {
+    struct statement root = parse_basic(parser_state); // PRIMARY
+    while (token_match(parser_state, 5, TOKEN_OPEN_PARENTHESIS, TOKEN_OPEN_BRACKET, TOKEN_DOT, TOKEN_INCREMENT, TOKEN_DECREMENT)) {
+        struct statement new_root = make_statement(parser_state, POSTFIX);
+        struct statement  tail = parse_postfix_tail(parser_state);
+        add_child(&new_root.list, &root);
+        add_child(&new_root.list, &tail);
+        if (tail.type == ERROR_EXPR) {
             new_root.type = ERROR_EXPR;
             return new_root;
         }
@@ -678,103 +703,118 @@ struct statement parse_postfix_tail(struct parser_state * parser_state)
 {
     if (token_match(parser_state, 1, TOKEN_OPEN_PARENTHESIS)) {
         advance_token(parser_state);
+        // ARG_LIST is optional
         struct statement arg_list = parse_arg_list(parser_state);
         if (arg_list.type == ERROR_EXPR) {
-            arg_list.type =  ERROR_EXPR;
-            return  arg_list;
-        }
-        if (arg_list.type == EMPTY_EXPR) {
-            arg_list.type = EMPTY_EXPR;
             return arg_list;
         }
         if (!token_match(parser_state, 1, TOKEN_CLOSED_PARENTHESIS)) {
             report_parse_error(parser_state, "expect ')' after function call");
             arg_list.type = ERROR_EXPR;
-            return  arg_list;
+            return arg_list;
         }
+        advance_token(parser_state);
         return arg_list;
     }
 
-    if (token_match(parser_state,1, TOKEN_OPEN_BRACKET)) {
+    if (token_match(parser_state, 1, TOKEN_OPEN_BRACKET)) {
         advance_token(parser_state);
         struct statement expr = parse_expr(parser_state);
         if (expr.type == ERROR_EXPR) {
             expr.type = ERROR_EXPR;
             return expr;
         }
+        //handling error like array[];
         if (expr.type == EMPTY_EXPR) {
-            expr.type = EMPTY_EXPR;
-            return expr;
-        }
-        if (!token_match(parser_state, 1, TOKEN_CLOSED_BRACKET)) {
-            report_parse_error(parser_state, "expect ']'  in this indexing statement");
+            report_parse_error(parser_state, "expect expression in indexing statement");
             expr.type = ERROR_EXPR;
             return expr;
         }
+        if (!token_match(parser_state, 1, TOKEN_CLOSED_BRACKET)) {
+            report_parse_error(parser_state, "expect ']' in indexing statement");
+            expr.type = ERROR_EXPR;
+            return expr;
+        }
+        advance_token(parser_state);
         return expr;
     }
 
     if (token_match(parser_state, 1, TOKEN_DOT)) {
         advance_token(parser_state);
-        if (!token_match(parser_state, 1, TOKEN_IDENTIFIER)) {
-            report_parse_error(parser_state, "expect identifier after using '.' operator");
-            return make_statement(parser_state, ERROR_EXPR);
+        struct statement member = parse_basic(parser_state);
+        if (member.type == ERROR_EXPR || member.type == EMPTY_EXPR) {
+            report_parse_error(parser_state, "expect identifier after '.' operator");
+            member.type = ERROR_EXPR;
+            return member;
         }
-        return parse_basic(parser_state);
+        return member;
     }
 
+    if (token_match(parser_state, 2, TOKEN_INCREMENT, TOKEN_DECREMENT)) {
+        struct statement stmt = make_statement(parser_state, UNARY_STMT);
+        advance_token(parser_state);
+        return stmt;
+    }
+    // If none matched, return error
     return make_statement(parser_state, ERROR_EXPR);
-
 }
 
 struct statement parse_arg_list(struct parser_state * parser_state)
-{  
+{
     struct statement root = make_statement(parser_state, ARG_LIST);
-    struct statement start = parse_assignment(parser_state);
-    add_child(&root.list, &start);
-    if (start.type == ERROR_EXPR) {
-        root.type == ERROR_EXPR;
-        return root;
-    }
-    if (start.type == EMPTY_EXPR) {
-        root.type == ERROR_EXPR;
-        return root;
-    }
-    while (token_match(parser_state, 1, TOKEN_COMMA)) {
+    // ARG_LIST: ASSIGNMENT (',' ASSIGNMENT)*
+    if (!token_match(parser_state, 1, TOKEN_CLOSED_PARENTHESIS)) {
+        struct statement first = parse_assignment(parser_state);
+        add_child(&root.list, &first);
+        if (first.type == ERROR_EXPR) {
+            root.type = ERROR_EXPR;
+            return root;
+        }
+
+        //handle error like func(, expr)
+        if (first.type == EMPTY_EXPR && !token_match(parser_state, 1, TOKEN_CLOSED_PARENTHESIS)) {
+            report_parse_error(parser_state, "expect expression before ',' in argument list");
+            root.type = ERROR_EXPR;
+            return root;
+        }
+
+        while (token_match(parser_state, 1, TOKEN_COMMA)) {
             advance_token(parser_state);
-            struct statement right = parse_assignment(parser_state);
-            add_child(&root.list, &right);
-
-            if (right.type == ERROR_EXPR) {
-                root.type == ERROR_EXPR;
+            struct statement next = parse_assignment(parser_state);
+            add_child(&root.list, &next);
+            if (next.type == ERROR_EXPR) {
+                root.type = ERROR_EXPR;
                 return root;
             }
-            if (right.type == EMPTY_EXPR) {
-                report_parse_error(parser_state, "here we expect an expression after ','");
-                root.type == ERROR_EXPR;
+            if (next.type == EMPTY_EXPR) {
+                report_parse_error(parser_state, "expect expression after ',' in argument list");
+                root.type = ERROR_EXPR;
                 return root;
             }
+        }
     }
-
     return root;
 }
 
 struct statement parse_basic(struct parser_state *parser_state)
 {
-    struct token *cur_token = peek_token(parser_state);
-
-    if (cur_token->token_type == TOKEN_NUMBER || cur_token->token_type == TOKEN_STR_LITERAL || 
-        cur_token->token_type == TOKEN_IDENTIFIER || cur_token->token_type == TOKEN_TRUE ||
-        cur_token->token_type == TOKEN_FALSE || cur_token->token_type == TOKEN_NIL) {
+    if (token_match(parser_state, 5, TOKEN_IDENTIFIER, TOKEN_STR_LITERAL, TOKEN_NUMBER, TOKEN_TRUE, TOKEN_FALSE, TOKEN_NIL)) {
         struct statement  stmt = make_statement(parser_state, BASIC_STMT);
         advance_token(parser_state);
         return stmt;
     }
 
-    if (cur_token->token_type == TOKEN_OPEN_PARENTHESIS) {
+    if (token_match(parser_state, 1, TOKEN_OPEN_PARENTHESIS)) {
         advance_token(parser_state);
         struct statement child = parse_expr(parser_state);
         if (child.type == ERROR_EXPR) return child;
+        //here handling errors like var name = 10 + 11 + () + 12 + ( (1));
+        if (child.type == EMPTY_EXPR) {
+            report_parse_error(parser_state, "expect expression here in grouping expression");
+            child.type = ERROR_EXPR;
+            return child;
+        }
+
         if (!token_match(parser_state, 1, TOKEN_CLOSED_PARENTHESIS)) {
             report_parse_error(parser_state, "expect ')' here in the end of grouping expression");
             child.type = ERROR_EXPR;
@@ -787,12 +827,79 @@ struct statement parse_basic(struct parser_state *parser_state)
     return make_statement(parser_state, EMPTY_EXPR);
 }
 
+struct statement parse_break(struct parser_state *parser_state) {
+    struct statement stmt = make_statement(parser_state, BREAK_STMT);
+    advance_token(parser_state); // consume 'break'
+    if (!token_match(parser_state, 1, TOKEN_SEMICOLON)) {
+        report_parse_error(parser_state, "expect ';' after break");
+        stmt.type = ERROR_EXPR;
+        return stmt;
+    }
+    advance_token(parser_state);
+    return stmt;
+}
+
+struct statement parse_continue(struct parser_state *parser_state) {
+    struct statement stmt = make_statement(parser_state, CONTINUE_STMT);
+    advance_token(parser_state); // consume 'continue'
+    if (!token_match(parser_state, 1, TOKEN_SEMICOLON)) {
+        report_parse_error(parser_state, "expect ';' after continue");
+        stmt.type = ERROR_EXPR;
+        return stmt;
+    }
+    advance_token(parser_state);
+    return stmt;
+}
+
+struct statement parse_return(struct parser_state *parser_state) {
+    struct statement stmt = make_statement(parser_state, RETURN_STMT);
+    advance_token(parser_state); // consume 'return'
+    if (!token_match(parser_state, 1, TOKEN_SEMICOLON)) {
+        struct statement expr = parse_expr(parser_state);
+        add_child(&stmt.list, &expr);
+        if (!token_match(parser_state, 1, TOKEN_SEMICOLON)) {
+            report_parse_error(parser_state, "expect ';' after return expression");
+            stmt.type = ERROR_EXPR;
+            return stmt;
+        }
+    }
+    advance_token(parser_state);
+    return stmt;
+}
+
+struct statement parse_print(struct parser_state *parser_state) {
+    struct statement stmt = make_statement(parser_state, PRINT_STMT);
+    advance_token(parser_state); // consume 'print'
+    if (!token_match(parser_state, 1, TOKEN_OPEN_PARENTHESIS)) {
+        report_parse_error(parser_state, "expect '(' after print");
+        stmt.type = ERROR_EXPR;
+        return stmt;
+    }
+    advance_token(parser_state);
+    struct statement expr = parse_expr(parser_state);
+    add_child(&stmt.list, &expr);
+    if (!token_match(parser_state, 1, TOKEN_CLOSED_PARENTHESIS)) {
+        report_parse_error(parser_state, "expect ')' after print expression");
+        stmt.type = ERROR_EXPR;
+        return stmt;
+    }
+    advance_token(parser_state);
+    if (!token_match(parser_state, 1, TOKEN_SEMICOLON)) {
+        report_parse_error(parser_state, "expect ';' after print statement");
+        stmt.type = ERROR_EXPR;
+        return stmt;
+    }
+    advance_token(parser_state);
+    return stmt;
+}
+
 void synchronize(struct parser_state *parser_state)
 {
     while (!token_match(parser_state, 1, TOKEN_EOF)) {
         switch (peek_token(parser_state)->token_type) {
             case TOKEN_IF: case TOKEN_WHILE: case TOKEN_FOR: case TOKEN_OPEN_CURLY:
-            case TOKEN_VAR: case TOKEN_FUN:
+            case TOKEN_VAR: case TOKEN_FUN: case TOKEN_BREAK: case TOKEN_CONTINUE:
+            case TOKEN_RETURN: case TOKEN_PRINT:
                 return;
             case TOKEN_SEMICOLON: case TOKEN_CLOSED_CURLY:
                 advance_token(parser_state);
@@ -808,7 +915,8 @@ void synchronize_block(struct parser_state *parser_state)
     while (!token_match(parser_state, 1, TOKEN_EOF)) {
         switch (peek_token(parser_state)->token_type) {
             case TOKEN_IF: case TOKEN_WHILE: case TOKEN_FOR: case TOKEN_OPEN_CURLY: case TOKEN_VAR: 
-            case TOKEN_CLOSED_CURLY: case TOKEN_FUN:
+            case TOKEN_CLOSED_CURLY: case TOKEN_FUN: case TOKEN_BREAK: case TOKEN_CONTINUE:
+            case TOKEN_RETURN: case TOKEN_PRINT:
                 return;
             case TOKEN_SEMICOLON:
                 advance_token(parser_state);
@@ -818,3 +926,165 @@ void synchronize_block(struct parser_state *parser_state)
         }
     }
 }
+
+struct statement parse_bitwise_and(struct parser_state *parser_state) {
+    struct statement left = parse_equality(parser_state);
+    while (token_match(parser_state, 1, TOKEN_AND)) {
+        struct statement root = make_statement(parser_state, BITWISE_AND_STMT);
+        advance_token(parser_state);
+        struct statement right = parse_equality(parser_state);
+        add_child(&root.list, &left);
+        add_child(&root.list, &right);
+        if (right.type == ERROR_EXPR) {
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        if (right.type == EMPTY_EXPR) {
+            char error_buffer[40];
+            sprintf(error_buffer, "Expect expression after %s", root.node.lexeme);
+            report_parse_error(parser_state, error_buffer);
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        left = root;
+    }
+    return left;
+}
+
+struct statement parse_bitwise_xor(struct parser_state *parser_state) {
+    struct statement left = parse_bitwise_and(parser_state);
+    while (token_match(parser_state, 1, TOKEN_XOR)) {
+        struct statement root = make_statement(parser_state, BITWISE_XOR_STMT);
+        advance_token(parser_state);
+        struct statement right = parse_bitwise_and(parser_state);
+        add_child(&root.list, &left);
+        add_child(&root.list, &right);
+        if (right.type == ERROR_EXPR) {
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        if (right.type == EMPTY_EXPR) {
+            char error_buffer[40];
+            sprintf(error_buffer, "Expect expression after %s", root.node.lexeme);
+            report_parse_error(parser_state, error_buffer);
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        left = root;
+    }
+    return left;
+}
+
+struct statement parse_bitwise_or(struct parser_state *parser_state) {
+    struct statement left = parse_bitwise_xor(parser_state);
+    while (token_match(parser_state, 1, TOKEN_OR)) {
+        struct statement root = make_statement(parser_state, BITWISE_OR_STMT);
+        advance_token(parser_state);
+        struct statement right = parse_bitwise_xor(parser_state);
+        add_child(&root.list, &left);
+        add_child(&root.list, &right);
+        if (right.type == ERROR_EXPR) {
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        if (right.type == EMPTY_EXPR) {
+            char error_buffer[40];
+            sprintf(error_buffer, "Expect expression after %s", root.node.lexeme);
+            report_parse_error(parser_state, error_buffer);
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        left = root;
+    }
+    return left;
+}
+
+struct statement parse_logical_and(struct parser_state *parser_state) {
+    struct statement left = parse_bitwise_or(parser_state);
+    while (token_match(parser_state, 1, TOKEN_AND_AND)) {
+        struct statement root = make_statement(parser_state, LOGICAL_AND_STMT);
+        advance_token(parser_state);
+        struct statement right = parse_bitwise_or(parser_state);
+        add_child(&root.list, &left);
+        add_child(&root.list, &right);
+        if (right.type == ERROR_EXPR) {
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        if (right.type == EMPTY_EXPR) {
+            char error_buffer[40];
+            sprintf(error_buffer, "Expect expression after %s", root.node.lexeme);
+            report_parse_error(parser_state, error_buffer);
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        left = root;
+    }
+    return left;
+}
+
+struct statement parse_logical_or(struct parser_state *parser_state) {
+    struct statement left = parse_logical_and(parser_state);
+    while (token_match(parser_state, 1, TOKEN_OR_OR)) {
+        struct statement root = make_statement(parser_state, LOGICAL_OR_STMT);
+        advance_token(parser_state);
+        struct statement right = parse_logical_and(parser_state);
+        add_child(&root.list, &left);
+        add_child(&root.list, &right);
+        if (right.type == ERROR_EXPR) {
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        if (right.type == EMPTY_EXPR) {
+            char error_buffer[40];
+            sprintf(error_buffer, "Expect expression after %s", root.node.lexeme);
+            report_parse_error(parser_state, error_buffer);
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        left = root;
+    }
+    return left;
+}
+
+struct statement parse_conditional(struct parser_state *parser_state) {
+    struct statement left = parse_logical_or(parser_state);
+    if (left.type == ERROR_EXPR) return left;
+    if (left.type ==  EMPTY_EXPR) {
+        report_parse_error(parser_state, "expect expression before '?' in conditional expression");
+        left.type = ERROR_EXPR;
+        return left;
+    }
+    if (token_match(parser_state, 1, TOKEN_QUESTION)) {
+        struct statement root = make_statement(parser_state, CONDITIONAL_STMT);
+        advance_token(parser_state);
+        struct statement middle = parse_expr(parser_state);
+        add_child(&root.list, &left);
+        add_child(&root.list, &middle);
+        if (middle.type == ERROR_EXPR) {
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        if (middle.type == EMPTY_EXPR) {
+            report_parse_error(parser_state, "expect expression before ':' in conditional expression");
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        if (!token_match(parser_state, 1, TOKEN_COLON)) {
+            report_parse_error(parser_state, "expect ':' in conditional expression");
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        advance_token(parser_state);
+        struct statement right = parse_conditional(parser_state);
+        add_child(&root.list, &right);
+        if (right.type == ERROR_EXPR) {
+            root.type = ERROR_EXPR;
+            return root;
+        }
+        return root;
+    }
+    return left;
+}
+
+

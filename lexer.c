@@ -20,13 +20,13 @@ char *FULL_LANGUAGE[] = {
     // Comparison Operators
     ">", "<", ">=", "<=", "==", "!=",
     // Logical / Unary
-    "!",
+    "!", "&&", "||", 
     // Increment / Decrement
     "++", "--",
     // Ternary
     "?", ":",
     // Keywords
-    "nil", "if", "else", "while", "for", "fun", "var", "true", "false"
+    "nil", "if", "else", "while", "for", "fun", "var", "true", "false", "continue", "break", "return", "print"
 };
 
 enum token_type FULL_LANGUAGE_TYPE[] = {
@@ -50,14 +50,14 @@ enum token_type FULL_LANGUAGE_TYPE[] = {
     TOKEN_GREATER_EQUAL, TOKEN_LESS_EQUAL,
     TOKEN_EQUAL, TOKEN_BANG_EQUAL,
     // Logical / Unary
-    TOKEN_BANG,
+    TOKEN_BANG, TOKEN_OR_OR, TOKEN_AND_AND,
     // Increment / Decrement
     TOKEN_INCREMENT, TOKEN_DECREMENT,
     // Ternary
     TOKEN_QUESTION, TOKEN_COLON,
     //Key words
     TOKEN_NIL, TOKEN_IF, TOKEN_ELSE, TOKEN_WHILE, TOKEN_FOR,
-    TOKEN_FUN, TOKEN_VAR, TOKEN_TRUE, TOKEN_FALSE
+    TOKEN_FUN, TOKEN_VAR, TOKEN_TRUE, TOKEN_FALSE, TOKEN_CONTINUE, TOKEN_BREAK, TOKEN_RETURN, TOKEN_PRINT
 };
 
 char *FULL_LANGUAGE_TYPE_NAME[] = {
@@ -88,7 +88,7 @@ char *FULL_LANGUAGE_TYPE_NAME[] = {
     "QUESTION", "COLON",
     // Keywords
     "NIL", "IF", "ELSE", "WHILE", "FOR",
-    "FUN", "VAR", "TRUE", "FALSE"
+    "FUN", "VAR", "TRUE", "FALSE", "CONTINUE", "BREAK", "RETURN", "PRINT"
 };
 
 
@@ -255,10 +255,29 @@ void scan_operator(struct lexer_state *lexer_state)
     save_token_begining(lexer_state);
     advance_char(lexer_state);
     switch(prev_char(lexer_state)) {
-        case '+': case '-': case '*': case '/': case '>': case '<': case '=': case '!':
+        case '+': case '-':  case '&': case '|':
+            if (peek_char(lexer_state)  == '=' || peek_char(lexer_state) == prev_char(lexer_state)) {
+                advance_char(lexer_state);
+            }
+            break;
+        case '*': case '/': case '=': case '!': case '%': case '^':
+        case '~':
             if (peek_char(lexer_state)  == '=') {
                 advance_char(lexer_state);
             }
+            break;
+        case '<': case '>':
+            if (peek_char(lexer_state) == prev_char(lexer_state)) {
+                advance_char(lexer_state);
+                if (peek_char(lexer_state) == '=') {
+                    advance_char(lexer_state);
+                }
+            }
+            else if (peek_char(lexer_state) == '=') {
+                advance_char(lexer_state);
+            }
+            break;
+        default:
             break;
     }
     char *lexeme = get_cur_token_lexeme(lexer_state);
