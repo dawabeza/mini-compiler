@@ -17,7 +17,7 @@ void dump_statement_dot(FILE *out, struct statement *stmt, int *id, int parent_i
     }
 
     for (int i = 0; i < stmt->list.count; i++) {
-        dump_statement_dot(out, &stmt->list.data[i], id, my_id);
+        dump_statement_dot(out, stmt->list.data[i], id, my_id);
     }
 }
 
@@ -39,19 +39,22 @@ int main() {
     struct lexer_state lexer_state;
     init_lexer_state(&lexer_state);
     scan(&lexer_state);
-    print_tokens(&lexer_state);
     if (lexer_state.had_error) {
+        destroy_lexer_state(&lexer_state);
         printf("EXIT WITH LEXER ERROR"); exit(1);
     }
     //the parsing stage
     struct parser_state parser_state;
     init_parser_state(&parser_state, &lexer_state);
-    struct statement syntax_tree = parse_program(&parser_state);
+    struct statement *syntax_tree = parse_program(&parser_state);
     if (parser_state.had_error) {
+        destroy_statement(syntax_tree);
         printf("EXIT WITH ABOVE ERRORS");
+        exit(1);
     }
-    dump_ast_dot(&syntax_tree, "myast.dot");
-    destroy_statement(&syntax_tree);
+    
+    dump_ast_dot(syntax_tree, "myast.dot");
+    destroy_statement(syntax_tree);
     destroy_lexer_state(&lexer_state);
 
 }

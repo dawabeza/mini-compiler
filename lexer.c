@@ -133,11 +133,11 @@ void scan(struct lexer_state *lexer_state)
         else if (cur_char == '\"') {
             scan_str_literal(lexer_state);
         }
-        else if (find_operator(lexer_state, cur_char) != -1) {
-            scan_operator(lexer_state);
-        }
         else if (cur_char == '#') {
             skip_comment(lexer_state);
+        }
+        else if (find_operator(lexer_state, cur_char) != -1) {
+            scan_operator(lexer_state);
         }
         else if (cur_char == '\n') {
             lexer_state->line++;
@@ -234,19 +234,21 @@ void scan_name(struct lexer_state *lexer_state)
 
 void scan_str_literal(struct lexer_state *lexer_state)
 {
+    advance_char(lexer_state); //skip first double quote
+
     save_token_begining(lexer_state);
-    advance_char(lexer_state);
     while (peek_char(lexer_state) != '\"' && peek_char(lexer_state) != '\n' && peek_char(lexer_state) != '\0')
         advance_char(lexer_state);
 
     if (peek_char(lexer_state) == '\n' || peek_char(lexer_state) == '\0') {
-        report_lexer_error(lexer_state, "No closing double quote for string");
+        report_lexer_error(lexer_state, "expect '\"' for string here");
     }
     else {
-        advance_char(lexer_state);
         char *lexeme = get_cur_token_lexeme(lexer_state);
         struct literal *str_literal = make_literal(TOKEN_STR_LITERAL, 0, lexeme);
         add_token(lexer_state, lexeme, TOKEN_STR_LITERAL, str_literal); 
+
+        advance_char(lexer_state); //skip closing double quote
     }
 }
 
